@@ -1,0 +1,41 @@
+{"users": [
+{
+  "localId": "BYcRtIAz0GSdeiRG4kuX0wU2Se73",
+  "email": "nurse@healthcare.com",
+  "emailVerified": false,
+  "passwordHash": "F5ZHOyl0kQTz1Kd/ghyiZqrZmspd2I281gbkuVcQzR5yvZSifZoF7gARVLBhwlrR9DpIRVPiTvDnRUSdS+mLOg==",
+  "salt": "vBkPFuVqQtl/lA==",
+  "lastSignedInAt": "1739908206755",
+  "createdAt": "1739907521106",
+  "providerUserInfo": []
+},
+{
+  "localId": "ElePKObPezT2AWYVOCp35LzGAkU2",
+  "email": "doctor2@healthcare.com",
+  "emailVerified": false,
+  "passwordHash": "bAufyadCfHzxT7XVynfmECmQgoOOXgd2HDtOnOlT7J3G/GJKnyy5emjwcZPyHzWIEzCSQKwANdkQmbIr77p1tw==",
+  "salt": "KJ4at0Yg/FFXwg==",
+  "lastSignedInAt": "1739908206334",
+  "createdAt": "1739907520101",
+  "providerUserInfo": []
+},
+{
+  "localId": "y08Vx7ZE23UaAOb41nIctLaqA6l1",
+  "email": "doctor@healthcare.com",
+  "emailVerified": false,
+  "passwordHash": "2VNoX0U1Jkqw0/bakiMQl4VEykEtQ6jng9JP/KfQXzbwJdtych58ovnf/zA3tylf1mMt6CcyooV8rRV7zHbNOw==",
+  "salt": "hTh90RXUhrI/jQ==",
+  "lastSignedInAt": "1739908205916",
+  "createdAt": "1739907518807",
+  "providerUserInfo": []
+},
+{
+  "localId": "y08uWeJoGTakEL68AEhcakE0FOn1",
+  "email": "admin@healthcare.com",
+  "emailVerified": false,
+  "passwordHash": "OIiq74sqvd9rfXnBnS1J/BM0q05At33pDzyRLBf0cLPE4CRPmB+1MjglBpTyY8oEO7g1DJ0XloZeQeED06D3kQ==",
+  "salt": "mb1GF6FodhPW4A==",
+  "lastSignedInAt": "1739908205356",
+  "createdAt": "1739901781249",
+  "providerUserInfo": []
+}]}

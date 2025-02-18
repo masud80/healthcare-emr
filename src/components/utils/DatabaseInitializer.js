@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button, Dialog, DialogTitle, DialogContent, DialogActions, Typography } from '@mui/material';
 import { initializeDatabase } from '../../utils/initializeTestData';
+import { addAdminRole } from '../../utils/addAdminRole';
 
 const DatabaseInitializer = () => {
   const [open, setOpen] = useState(false);
@@ -15,6 +16,7 @@ const DatabaseInitializer = () => {
     
     try {
       await initializeDatabase();
+      await addAdminRole(); // Ensure admin role exists in Firestore
       setSuccess(true);
     } catch (error) {
       setError(error.message);

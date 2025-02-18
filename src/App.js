@@ -13,6 +13,7 @@ import PatientForm from './components/patients/PatientForm';
 import AppointmentList from './components/appointments/AppointmentList';
 import AppointmentDetails from './components/appointments/AppointmentDetails';
 import UserManagement from './components/admin/UserManagement';
+import FacilityList from './components/facilities/FacilityList';
 import PrivateRoute from './components/auth/PrivateRoute';
 
 const theme = createTheme({
@@ -63,41 +64,103 @@ function App() {
             <Route path="/login" element={<Login />} />
             
             {/* Protected Routes */}
-            <Route
-              path="/"
-              element={
-                <PrivateRoute allowedRoles={['admin', 'doctor', 'nurse']}>
-                  <Layout>
-                    <Routes>
-                      <Route path="/dashboard" element={<Dashboard />} />
-                      
-                      {/* Patient Routes */}
-                      <Route path="/patients" element={<PatientList />} />
-                      <Route path="/patients/new" element={<PatientForm />} />
-                      <Route path="/patients/:id" element={<PatientDetails />} />
-                      <Route path="/patients/:id/edit" element={<PatientForm />} />
-                      
-                      {/* Appointment Routes */}
-                      <Route path="/appointments" element={<AppointmentList />} />
-                      <Route path="/appointments/new" element={<AppointmentDetails />} />
-                      <Route path="/appointments/:id" element={<AppointmentDetails />} />
-                      
-                      {/* Admin Routes */}
-                      <Route
-                        path="/users"
-                        element={
-                          <PrivateRoute allowedRoles={['admin']}>
-                            <UserManagement />
-                          </PrivateRoute>
-                        }
-                      />
-                      
-                      <Route index element={<Navigate to="/dashboard" replace />} />
-                    </Routes>
-                  </Layout>
-                </PrivateRoute>
-              }
-            />
+            <Route element={<Layout />}>
+              <Route
+                path="/"
+                element={
+                  <PrivateRoute allowedRoles={['admin', 'doctor', 'nurse']}>
+                    <Navigate to="/dashboard" replace />
+                  </PrivateRoute>
+                }
+              />
+              
+              <Route
+                path="/dashboard"
+                element={
+                  <PrivateRoute allowedRoles={['admin', 'doctor', 'nurse']}>
+                    <Dashboard />
+                  </PrivateRoute>
+                }
+              />
+              
+              {/* Patient Routes */}
+              <Route
+                path="/patients"
+                element={
+                  <PrivateRoute allowedRoles={['admin', 'doctor', 'nurse']}>
+                    <PatientList />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/patients/new"
+                element={
+                  <PrivateRoute allowedRoles={['admin', 'doctor', 'nurse']}>
+                    <PatientForm />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/patients/:id"
+                element={
+                  <PrivateRoute allowedRoles={['admin', 'doctor', 'nurse']}>
+                    <PatientDetails />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/patients/:id/edit"
+                element={
+                  <PrivateRoute allowedRoles={['admin', 'doctor', 'nurse']}>
+                    <PatientForm />
+                  </PrivateRoute>
+                }
+              />
+              
+              {/* Appointment Routes */}
+              <Route
+                path="/appointments"
+                element={
+                  <PrivateRoute allowedRoles={['admin', 'doctor', 'nurse']}>
+                    <AppointmentList />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/appointments/new"
+                element={
+                  <PrivateRoute allowedRoles={['admin', 'doctor', 'nurse']}>
+                    <AppointmentDetails />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/appointments/:id"
+                element={
+                  <PrivateRoute allowedRoles={['admin', 'doctor', 'nurse']}>
+                    <AppointmentDetails />
+                  </PrivateRoute>
+                }
+              />
+              
+              {/* Admin Routes */}
+              <Route
+                path="/users"
+                element={
+                  <PrivateRoute allowedRoles={['admin']}>
+                    <UserManagement />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/facilities"
+                element={
+                  <PrivateRoute allowedRoles={['admin']}>
+                    <FacilityList />
+                  </PrivateRoute>
+                }
+              />
+            </Route>
             
             <Route
               path="/unauthorized"

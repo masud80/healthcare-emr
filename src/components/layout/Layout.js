@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Outlet } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../../redux/slices/authSlice';
 import { auth } from '../../firebase/config';
@@ -25,11 +25,12 @@ import {
   Dashboard as DashboardIcon,
   Person as PersonIcon,
   ExitToApp as LogoutIcon,
+  Business as BusinessIcon,
 } from '@mui/icons-material';
 
 const drawerWidth = 240;
 
-const Layout = ({ children }) => {
+const Layout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -57,7 +58,10 @@ const Layout = ({ children }) => {
   ];
 
   if (role === 'admin') {
-    menuItems.push({ text: 'Users', icon: <PersonIcon />, path: '/users' });
+    menuItems.push(
+      { text: 'Users', icon: <PersonIcon />, path: '/users' },
+      { text: 'Facilities', icon: <BusinessIcon />, path: '/facilities' }
+    );
   }
 
   const drawer = (
@@ -149,7 +153,7 @@ const Layout = ({ children }) => {
           mt: 8,
         }}
       >
-        {children}
+        <Outlet />
       </Box>
     </Box>
   );

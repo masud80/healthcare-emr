@@ -12,6 +12,27 @@ import {
   getDoc
 } from 'firebase/firestore';
 
+const testFacilities = [
+  {
+    name: 'Central Hospital',
+    address: '789 Hospital Drive, Anytown, USA',
+    phone: '555-0001',
+    type: 'hospital'
+  },
+  {
+    name: 'Westside Clinic',
+    address: '456 Medical Plaza, Anytown, USA',
+    phone: '555-0002',
+    type: 'clinic'
+  },
+  {
+    name: 'Eastside Medical Center',
+    address: '123 Healthcare Ave, Anytown, USA',
+    phone: '555-0003',
+    type: 'hospital'
+  }
+];
+
 const testUsers = [
   {
     email: 'admin@healthcare.com',
@@ -127,10 +148,55 @@ const testAppointments = [
   }
 ];
 
+let facilityIds = {};
+
+const assignFacilitiesToUser = async (userId, userRole, facilityIdsMap) => {
+  const userFacilitiesRef = collection(db, 'user_facilities');
+  
+  if (userRole === 'admin') {
+    // Admin has access to all facilities
+    for (const facilityId of Object.values(facilityIdsMap)) {
+      await addDoc(userFacilitiesRef, {
+        userId: userId,
+        facilityId: facilityId
+      });
+    }
+  } else {
+    // Other users get assigned to random facilities (1-2 facilities)
+    const facilityIdList = Object.values(facilityIdsMap);
+    const numFacilities = Math.floor(Math.random() * 2) + 1;
+    const selectedFacilities = facilityIdList
+      .sort(() => 0.5 - Math.random())
+      .slice(0, numFacilities);
+    
+    for (const facilityId of selectedFacilities) {
+      await addDoc(userFacilitiesRef, {
+        userId: userId,
+        facilityId: facilityId
+      });
+    }
+  }
+};
+
 export const initializeTestData = async () => {
   try {
     let doctorIds = {};
     let patientIds = {};
+    let facilityIds = {};
+
+    // Create test facilities
+    for (const facility of testFacilities) {
+      try {
+        const facilityDoc = await addDoc(collection(db, 'facilities'), {
+          ...facility,
+          createdAt: new Date().toISOString()
+        });
+        facilityIds[facility.name] = facilityDoc.id;
+        console.log(`Added facility: ${facility.name}`);
+      } catch (error) {
+        console.error(`Error adding facility ${facility.name}:`, error);
+      }
+    }
 
     // Create or get test users
     for (const user of testUsers) {
@@ -149,6 +215,9 @@ export const initializeTestData = async () => {
           name: user.name
         });
 
+        // Assign facilities to the user
+        await assignFacilitiesToUser(userCredential.user.uid, user.role, facilityIds);
+
         // Store doctor IDs for appointments
         if (user.role === 'doctor') {
           doctorIds[user.name] = userCredential.user.uid;
@@ -161,9 +230,25 @@ export const initializeTestData = async () => {
           console.log(`User exists: ${user.email}, getting ID...`);
           const userCredential = await signIn(auth, user.email, user.password);
           
-          // Get user data from Firestore
-          const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
-          if (userDoc.exists() && userDoc.data().role === 'doctor') {
+          // Get user data from Firestore or create if doesn't exist
+          const userRef = doc(db, 'users', userCredential.user.uid);
+          const userDoc = await getDoc(userRef);
+          
+          if (!userDoc.exists()) {
+            // Create user document if it doesn't exist
+            await setDoc(userRef, {
+              email: user.email,
+              role: user.role,
+              name: user.name
+            });
+            console.log(`Created Firestore document for: ${user.email}`);
+
+            // Assign facilities to the user
+            await assignFacilitiesToUser(userCredential.user.uid, user.role, facilityIds);
+          }
+          
+          // Store doctor ID if applicable
+          if (user.role === 'doctor') {
             doctorIds[user.name] = userCredential.user.uid;
           }
         } else {

@@ -12,7 +12,13 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     setUser: (state, action) => {
-      state.user = action.payload;
+      // Only store serializable user data
+      if (action.payload) {
+        const { uid, email } = action.payload;
+        state.user = { uid, email };
+      } else {
+        state.user = null;
+      }
     },
     setRole: (state, action) => {
       state.role = action.payload;
