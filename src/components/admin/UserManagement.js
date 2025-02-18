@@ -27,6 +27,7 @@ import {
   IconButton,
   Box,
   Alert,
+  FormHelperText,
 } from '@mui/material';
 import { Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
 import { useFormik } from 'formik';
@@ -48,6 +49,7 @@ const UserManagement = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [userFacilities, setUserFacilities] = useState({});
 
   useEffect(() => {
@@ -103,7 +105,9 @@ const UserManagement = () => {
     },
     validationSchema,
     enableReinitialize: true,
-    onSubmit: async (values, { resetForm }) => {
+    onSubmit: async (values, { resetForm, setSubmitting }) => {
+      setError(null);
+      setLoading(true);
       try {
         if (selectedUser) {
           // Update existing user
@@ -115,20 +119,23 @@ const UserManagement = () => {
 
           // Update user facilities
           const userFacilitiesRef = collection(db, 'user_facilities');
+          
+          // First, get existing facility assignments
           const userFacilitiesSnapshot = await getDocs(
             query(userFacilitiesRef, where('userId', '==', selectedUser.id))
           );
           
-          // Delete existing facility assignments
+          // Delete all existing facility assignments first
           for (const doc of userFacilitiesSnapshot.docs) {
             await deleteDoc(doc.ref);
           }
-
-          // Add new facility assignments
+          
+          // Add all selected facilities
           for (const facilityId of values.facilities) {
             await addDoc(userFacilitiesRef, {
               userId: selectedUser.id,
               facilityId: facilityId,
+              createdAt: new Date().toISOString()
             });
           }
         } else {
@@ -151,17 +158,21 @@ const UserManagement = () => {
             await addDoc(userFacilitiesRef, {
               userId: userCredential.user.uid,
               facilityId: facilityId,
+              createdAt: new Date().toISOString()
             });
           }
         }
 
+        await fetchUsers(); // Refresh the users list
         resetForm();
         setSelectedUser(null);
         setOpenDialog(false);
-        fetchUsers();
       } catch (error) {
         console.error('Error saving user:', error);
-        setError(error.message);
+        setError(error.message || 'Failed to save user');
+      } finally {
+        setLoading(false);
+        setSubmitting(false);
       }
     },
   });
@@ -306,7 +317,7 @@ const UserManagement = () => {
                   <MenuItem value="nurse">Nurse</MenuItem>
                 </Select>
               </FormControl>
-              <FormControl fullWidth>
+              <FormControl fullWidth error={formik.touched.facilities && Boolean(formik.errors.facilities)}>
                 <InputLabel>Facilities</InputLabel>
                 <Select
                   multiple
@@ -330,13 +341,25 @@ const UserManagement = () => {
                     </MenuItem>
                   ))}
                 </Select>
+                {formik.touched.facilities && formik.errors.facilities && (
+                  <FormHelperText error>{formik.errors.facilities}</FormHelperText>
+                )}
               </FormControl>
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-            <Button type="submit" variant="contained">
-              {selectedUser ? 'Update' : 'Create'}
+            <Button 
+              onClick={() => setOpenDialog(false)} 
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              variant="contained" 
+              disabled={loading}
+            >
+              {loading ? 'Saving...' : selectedUser ? 'Update' : 'Create'}
             </Button>
           </DialogActions>
         </form>
