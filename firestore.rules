@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && getUserData().role == 'admin';
+    }
+    
+    function isDoctor() {
+      return isAuthenticated() && getUserData().role == 'doctor';
+    }
+    
+    function isNurse() {
+      return isAuthenticated() && getUserData().role == 'nurse';
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      // Allow write to user's own document during initialization
+      allow write: if request.auth.uid == userId;
+      // Allow admin to manage other users
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Patients collection
+    match /patients/{patientId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated(); // Temporarily allow creation during initialization
+      allow update: if isAdmin() || isDoctor() || isNurse();
+      allow delete: if isAdmin();
+    }
+
+    // Appointments collection
+    match /appointments/{appointmentId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated(); // Temporarily allow creation during initialization
+      allow update: if isAdmin() || isDoctor() || isNurse();
+      allow delete: if isAdmin();
+    }
+  }
+}
