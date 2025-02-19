@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { collection, getDocs, doc, setDoc, deleteDoc, query, where, addDoc } from 'firebase/firestore';
 import { setFacilities } from '../../redux/slices/facilitiesSlice';
@@ -52,12 +52,7 @@ const UserManagement = () => {
   const [loading, setLoading] = useState(false);
   const [userFacilities, setUserFacilities] = useState({});
 
-  useEffect(() => {
-    fetchUsers();
-    fetchFacilities();
-  }, []);
-
-  const fetchFacilities = async () => {
+  const fetchFacilities = useCallback(async () => {
     try {
       const facilitiesSnapshot = await getDocs(collection(db, 'facilities'));
       const facilitiesData = facilitiesSnapshot.docs.map(doc => ({
@@ -69,9 +64,11 @@ const UserManagement = () => {
       console.error('Error fetching facilities:', error);
       setError('Failed to fetch facilities');
     }
-  };
+  }, [dispatch]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
+    setError(null);
+    setLoading(true);
     try {
       const querySnapshot = await getDocs(collection(db, 'users'));
       const userList = querySnapshot.docs.map(doc => ({
@@ -82,18 +79,40 @@ const UserManagement = () => {
 
       // Fetch user facilities
       const userFacilitiesMap = {};
-      for (const user of userList) {
-        const userFacilitiesSnapshot = await getDocs(
-          query(collection(db, 'user_facilities'), where('userId', '==', user.id))
-        );
-        userFacilitiesMap[user.id] = userFacilitiesSnapshot.docs.map(doc => doc.data().facilityId);
-      }
+      const userFacilitiesPromises = userList.map(async user => {
+        try {
+          const userFacilitiesSnapshot = await getDocs(
+            query(collection(db, 'user_facilities'), where('userId', '==', user.id))
+          );
+          userFacilitiesMap[user.id] = userFacilitiesSnapshot.docs.map(doc => doc.data().facilityId);
+        } catch (error) {
+          console.error(`Error fetching facilities for user ${user.id}:`, error);
+          userFacilitiesMap[user.id] = [];
+        }
+      });
+      
+      await Promise.all(userFacilitiesPromises);
       setUserFacilities(userFacilitiesMap);
+      setLoading(false);
     } catch (error) {
       console.error('Error fetching users:', error);
       setError('Failed to fetch users');
+      setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        await fetchFacilities();
+        await fetchUsers();
+      } catch (error) {
+        console.error('Error loading data:', error);
+        setError('Failed to load data');
+      }
+    };
+    loadData();
+  }, [fetchFacilities, fetchUsers]);
 
   const formik = useFormik({
     initialValues: {
@@ -126,18 +145,21 @@ const UserManagement = () => {
           );
           
           // Delete all existing facility assignments first
-          for (const doc of userFacilitiesSnapshot.docs) {
-            await deleteDoc(doc.ref);
-          }
+          const deletePromises = userFacilitiesSnapshot.docs.map(doc => deleteDoc(doc.ref));
+          await Promise.all(deletePromises);
           
           // Add all selected facilities
-          for (const facilityId of values.facilities) {
-            await addDoc(userFacilitiesRef, {
+          const addPromises = values.facilities.map(facilityId => 
+            addDoc(userFacilitiesRef, {
               userId: selectedUser.id,
               facilityId: facilityId,
               createdAt: new Date().toISOString()
-            });
-          }
+            })
+          );
+          await Promise.all(addPromises);
+          
+          // Update local state and refetch to ensure data is current
+          await fetchUsers();
         } else {
           // Create new user
           const userCredential = await createUserWithEmailAndPassword(
@@ -154,16 +176,19 @@ const UserManagement = () => {
 
           // Add facility assignments for new user
           const userFacilitiesRef = collection(db, 'user_facilities');
-          for (const facilityId of values.facilities) {
-            await addDoc(userFacilitiesRef, {
+          const addPromises = values.facilities.map(facilityId => 
+            addDoc(userFacilitiesRef, {
               userId: userCredential.user.uid,
               facilityId: facilityId,
               createdAt: new Date().toISOString()
-            });
-          }
+            })
+          );
+          await Promise.all(addPromises);
+          
+          // Update local state and refetch to ensure data is current
+          await fetchUsers();
         }
 
-        await fetchUsers(); // Refresh the users list
         resetForm();
         setSelectedUser(null);
         setOpenDialog(false);
@@ -185,8 +210,25 @@ const UserManagement = () => {
   const handleDelete = async (userId) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
+        // Delete user document
         await deleteDoc(doc(db, 'users', userId));
-        fetchUsers();
+        
+        // Delete user's facility assignments
+        const userFacilitiesRef = collection(db, 'user_facilities');
+        const userFacilitiesSnapshot = await getDocs(
+          query(userFacilitiesRef, where('userId', '==', userId))
+        );
+        
+        const deletePromises = userFacilitiesSnapshot.docs.map(doc => deleteDoc(doc.ref));
+        await Promise.all(deletePromises);
+        
+        // Update local state
+        setUsers(users.filter(user => user.id !== userId));
+        setUserFacilities(prev => {
+          const newState = { ...prev };
+          delete newState[userId];
+          return newState;
+        });
       } catch (error) {
         console.error('Error deleting user:', error);
         setError('Failed to delete user');

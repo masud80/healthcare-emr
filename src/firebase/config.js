@@ -11,14 +11,9 @@ const firebaseConfig = {
   appId: process.env.REACT_APP_FIREBASE_APP_ID
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
+// Initialize and export Firebase services
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-
-/* Connect to Firestore emulator in development
-if (process.env.REACT_APP_ENV === 'development') {
-  connectFirestoreEmulator(db, 'localhost', 8080);
-} */
-
-// Log which environment we're using
-console.log(`Using Firebase environment: ${process.env.REACT_APP_ENV}`);
