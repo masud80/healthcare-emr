@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, where, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import {
   Container,
@@ -24,6 +24,7 @@ import { setFacilities, setLoading, setError } from '../../redux/slices/faciliti
 const FacilityList = () => {
   const dispatch = useDispatch();
   const { facilities, loading } = useSelector((state) => state.facilities);
+  const { user, role } = useSelector((state) => state.auth);
   const [open, setOpen] = useState(false);
   const [editingFacility, setEditingFacility] = useState(null);
   const [facilityData, setFacilityData] = useState({
@@ -34,18 +35,39 @@ const FacilityList = () => {
   });
 
   useEffect(() => {
-    fetchFacilities();
-  }, []);
+    if (user && role) {
+      fetchFacilities();
+    }
+  }, [user, role]);
 
   const fetchFacilities = async () => {
     try {
       dispatch(setLoading());
+      
+      // First get all facilities
       const facilitiesSnapshot = await getDocs(collection(db, 'facilities'));
-      const facilitiesData = facilitiesSnapshot.docs.map(doc => ({
+      const allFacilities = facilitiesSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      dispatch(setFacilities(facilitiesData));
+      
+      let facilitiesToShow = [];
+      if (role === 'admin') {
+        facilitiesToShow = allFacilities;
+      } else if (user) {
+        // Get user's assigned facilities
+        const userFacilitiesRef = collection(db, 'user_facilities');
+        const userFacilitiesQuery = query(userFacilitiesRef, where('userId', '==', user.uid));
+        const userFacilitiesSnapshot = await getDocs(userFacilitiesQuery);
+        const facilityIds = userFacilitiesSnapshot.docs.map(doc => doc.data().facilityId);
+        
+        // Filter facilities to only show assigned ones
+        facilitiesToShow = allFacilities.filter(facility => 
+          facilityIds.includes(facility.id)
+        );
+      }
+      
+      dispatch(setFacilities(facilitiesToShow));
     } catch (error) {
       dispatch(setError(error.message));
     }
@@ -112,14 +134,16 @@ const FacilityList = () => {
         <Typography variant="h5" gutterBottom>
           Facilities
         </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => handleOpen()}
-          sx={{ mb: 2 }}
-        >
-          Add New Facility
-        </Button>
+        {role === 'admin' && (
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => handleOpen()}
+            sx={{ mb: 2 }}
+          >
+            Add New Facility
+          </Button>
+        )}
 
         <List>
           {facilities.map((facility) => (
@@ -128,14 +152,16 @@ const FacilityList = () => {
                 primary={facility.name}
                 secondary={`${facility.type} | ${facility.address} | ${facility.phone}`}
               />
-              <ListItemSecondaryAction>
-                <IconButton edge="end" onClick={() => handleOpen(facility)} sx={{ mr: 1 }}>
-                  <EditIcon />
-                </IconButton>
-                <IconButton edge="end" onClick={() => handleDelete(facility.id)}>
-                  <DeleteIcon />
-                </IconButton>
-              </ListItemSecondaryAction>
+              {role === 'admin' && (
+                <ListItemSecondaryAction>
+                  <IconButton edge="end" onClick={() => handleOpen(facility)} sx={{ mr: 1 }}>
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton edge="end" onClick={() => handleDelete(facility.id)}>
+                    <DeleteIcon />
+                  </IconButton>
+                </ListItemSecondaryAction>
+              )}
             </ListItem>
           ))}
         </List>

@@ -4,7 +4,7 @@ import patientsReducer from './slices/patientsSlice';
 import appointmentsReducer from './slices/appointmentsSlice';
 import facilitiesReducer from './slices/facilitiesSlice';
 
-export const store = configureStore({
+const store = configureStore({
   reducer: {
     auth: authReducer,
     patients: patientsReducer,
@@ -36,3 +36,5 @@ export const store = configureStore({
       },
     }),
 });
+
+export default store;

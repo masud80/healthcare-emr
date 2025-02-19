@@ -25,6 +25,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { role } = useSelector((state) => state.auth);
+  const isAdmin = role === 'admin';
 
   const handleLogout = async () => {
     try {
@@ -100,12 +101,12 @@ const Dashboard = () => {
           />
         </Grid>
         
-        {role === 'admin' && (
+        {isAdmin && (
           <Box sx={{ mt: 4 }}>
             <Button
               variant="contained"
               color="primary"
-              onClick={() => navigate('/users')}
+              onClick={() => navigate('/admin/users')}
             >
               Manage Users
             </Button>

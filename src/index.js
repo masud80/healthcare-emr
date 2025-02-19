@@ -5,7 +5,7 @@ import App from './App';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from './firebase/config';
-import { store } from './redux/store';
+import store from './redux/store';
 import { setUser, setRole } from './redux/slices/authSlice';
 
 const container = document.getElementById('root');

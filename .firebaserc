@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "healthcare-emr-dev"
-  }
+    "default": "quantumleap-emr-dev"
+  },
+  "targets": {},
+  "etags": {}
 }

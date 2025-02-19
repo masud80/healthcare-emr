@@ -25,3 +25,4 @@ yarn-error.log*
 # Firebase Environment Variables
 .env.development
 .env.production
+.firebase/logs/vsce-debug.log

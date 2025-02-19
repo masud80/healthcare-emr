@@ -194,7 +194,7 @@ export const initializeTestData = async () => {
         facilityIds[facility.name] = facilityDoc.id;
         console.log(`Added facility: ${facility.name}`);
       } catch (error) {
-        console.error(`Error adding facility ${facility.name}:`, error);
+        console.error(`Error adding facility ${facility.name}:`, error.message);
       }
     }
 

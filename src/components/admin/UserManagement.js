@@ -4,6 +4,7 @@ import { collection, getDocs, doc, setDoc, deleteDoc, query, where, addDoc } fro
 import { setFacilities } from '../../redux/slices/facilitiesSlice';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../../firebase/config';
+import AssignFacilityTest from './AssignFacilityTest';
 import {
   Container,
   Paper,
@@ -18,7 +19,6 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
   TextField,
   FormControl,
   InputLabel,
@@ -28,6 +28,8 @@ import {
   Box,
   Alert,
   FormHelperText,
+  Checkbox,
+  FormControlLabel,
 } from '@mui/material';
 import { Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
 import { useFormik } from 'formik';
@@ -67,6 +69,7 @@ const UserManagement = () => {
   }, [dispatch]);
 
   const fetchUsers = useCallback(async () => {
+    console.log('Fetching users from Firestore...');
     setError(null);
     setLoading(true);
     try {
@@ -120,7 +123,7 @@ const UserManagement = () => {
       password: '',
       name: selectedUser?.name || '',
       role: selectedUser?.role || 'nurse',
-      facilities: selectedUser ? userFacilities[selectedUser.id] || [] : [],
+      facilities: selectedUser?.facilities || [],
     },
     validationSchema,
     enableReinitialize: true,
@@ -139,24 +142,30 @@ const UserManagement = () => {
           // Update user facilities
           const userFacilitiesRef = collection(db, 'user_facilities');
           
-          // First, get existing facility assignments
-          const userFacilitiesSnapshot = await getDocs(
-            query(userFacilitiesRef, where('userId', '==', selectedUser.id))
-          );
-          
-          // Delete all existing facility assignments first
-          const deletePromises = userFacilitiesSnapshot.docs.map(doc => deleteDoc(doc.ref));
-          await Promise.all(deletePromises);
-          
-          // Add all selected facilities
-          const addPromises = values.facilities.map(facilityId => 
-            addDoc(userFacilitiesRef, {
-              userId: selectedUser.id,
-              facilityId: facilityId,
-              createdAt: new Date().toISOString()
-            })
-          );
-          await Promise.all(addPromises);
+          try {
+            // First, get existing facility assignments
+            const userFacilitiesSnapshot = await getDocs(
+              query(userFacilitiesRef, where('userId', '==', selectedUser.id))
+            );
+            
+            // Delete all existing facility assignments first
+            const deletePromises = userFacilitiesSnapshot.docs.map(doc => deleteDoc(doc.ref));
+            await Promise.all(deletePromises);
+            
+            // Add all selected facilities
+            for (const facilityId of values.facilities) {
+              await addDoc(userFacilitiesRef, {
+                userId: selectedUser.id,
+                facilityId: facilityId,
+                assignedAt: new Date().toISOString()
+              });
+            }
+            
+            console.log(`Updated facilities for user ${selectedUser.id}:`, values.facilities);
+          } catch (error) {
+            console.error('Error updating user facilities:', error);
+            throw error;
+          }
           
           // Update local state and refetch to ensure data is current
           await fetchUsers();
@@ -176,14 +185,19 @@ const UserManagement = () => {
 
           // Add facility assignments for new user
           const userFacilitiesRef = collection(db, 'user_facilities');
-          const addPromises = values.facilities.map(facilityId => 
-            addDoc(userFacilitiesRef, {
-              userId: userCredential.user.uid,
-              facilityId: facilityId,
-              createdAt: new Date().toISOString()
-            })
-          );
-          await Promise.all(addPromises);
+          try {
+            for (const facilityId of values.facilities) {
+              await addDoc(userFacilitiesRef, {
+                userId: userCredential.user.uid,
+                facilityId: facilityId,
+                assignedAt: new Date().toISOString()
+              });
+            }
+            console.log(`Added facilities for new user ${userCredential.user.uid}:`, values.facilities);
+          } catch (error) {
+            console.error('Error adding user facilities:', error);
+            throw error;
+          }
           
           // Update local state and refetch to ensure data is current
           await fetchUsers();
@@ -202,9 +216,25 @@ const UserManagement = () => {
     },
   });
 
-  const handleEdit = (user) => {
-    setSelectedUser(user);
-    setOpenDialog(true);
+  const handleEdit = async (user) => {
+    try {
+      // Fetch current facilities for the user
+      const userFacilitiesRef = collection(db, 'user_facilities');
+      const userFacilitiesSnapshot = await getDocs(
+        query(userFacilitiesRef, where('userId', '==', user.id))
+      );
+      const currentFacilities = userFacilitiesSnapshot.docs.map(doc => doc.data().facilityId);
+      
+      setSelectedUser({
+        ...user,
+        facilities: currentFacilities
+      });
+      setOpenDialog(true);
+      console.log('Current user facilities:', currentFacilities);
+    } catch (error) {
+      console.error('Error fetching user facilities:', error);
+      setError('Failed to fetch user facilities');
+    }
   };
 
   const handleDelete = async (userId) => {
@@ -261,6 +291,13 @@ const UserManagement = () => {
         </Button>
       </Box>
 
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h5" gutterBottom>
+          Testing Tools
+        </Typography>
+        <AssignFacilityTest />
+      </Box>
+
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
@@ -311,8 +348,26 @@ const UserManagement = () => {
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
         <form onSubmit={formik.handleSubmit}>
-          <DialogTitle>
-            {selectedUser ? 'Edit User' : 'Add New User'}
+          <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">
+              {selectedUser ? 'Edit User' : 'Add New User'}
+            </Typography>
+            <Box>
+              <Button 
+                onClick={() => setOpenDialog(false)} 
+                disabled={loading}
+                sx={{ mr: 1 }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                variant="contained" 
+                disabled={loading}
+              >
+                {loading ? 'Saving...' : selectedUser ? 'Update' : 'Create'}
+              </Button>
+            </Box>
           </DialogTitle>
           <DialogContent>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
@@ -359,51 +414,45 @@ const UserManagement = () => {
                   <MenuItem value="nurse">Nurse</MenuItem>
                 </Select>
               </FormControl>
-              <FormControl fullWidth error={formik.touched.facilities && Boolean(formik.errors.facilities)}>
-                <InputLabel>Facilities</InputLabel>
-                <Select
-                  multiple
-                  name="facilities"
-                  value={formik.values.facilities}
-                  onChange={formik.handleChange}
-                  error={formik.touched.facilities && Boolean(formik.errors.facilities)}
-                  renderValue={(selected) => (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {selected.map((value) => (
-                        <Typography key={value} component="span">
-                          {facilities.find(f => f.id === value)?.name}
-                        </Typography>
-                      ))}
-                    </Box>
-                  )}
-                >
+              <FormControl 
+                fullWidth 
+                error={formik.touched.facilities && Boolean(formik.errors.facilities)}
+                component="fieldset"
+              >
+                <Typography variant="subtitle1" gutterBottom>Facilities</Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, ml: 1 }}>
                   {facilities.map((facility) => (
-                    <MenuItem key={facility.id} value={facility.id}>
-                      {facility.name}
-                    </MenuItem>
+                    <FormControlLabel
+                      key={facility.id}
+                      control={
+                        <Checkbox
+                          checked={formik.values.facilities.includes(facility.id)}
+                          onChange={(event) => {
+                            const currentFacilities = [...formik.values.facilities];
+                            if (event.target.checked) {
+                              currentFacilities.push(facility.id);
+                            } else {
+                              const index = currentFacilities.indexOf(facility.id);
+                              if (index > -1) {
+                                currentFacilities.splice(index, 1);
+                              }
+                            }
+                            formik.setFieldValue('facilities', currentFacilities);
+                            console.log('Selected facilities:', currentFacilities);
+                          }}
+                          name={`facility-${facility.id}`}
+                        />
+                      }
+                      label={facility.name}
+                    />
                   ))}
-                </Select>
+                </Box>
                 {formik.touched.facilities && formik.errors.facilities && (
                   <FormHelperText error>{formik.errors.facilities}</FormHelperText>
                 )}
               </FormControl>
             </Box>
           </DialogContent>
-          <DialogActions>
-            <Button 
-              onClick={() => setOpenDialog(false)} 
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              variant="contained" 
-              disabled={loading}
-            >
-              {loading ? 'Saving...' : selectedUser ? 'Update' : 'Create'}
-            </Button>
-          </DialogActions>
         </form>
       </Dialog>
     </Container>

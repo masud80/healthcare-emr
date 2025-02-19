@@ -1,18 +1,26 @@
-import { Navigate } from 'react-router-dom';
+import React from 'react';
+import { Navigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { selectUser, selectLoading, selectRole } from '../../redux/slices/authSlice';
 
-const PrivateRoute = ({ children, allowedRoles }) => {
-  const { user, role } = useSelector((state) => state.auth);
+const PrivateRoute = ({ requireAdmin }) => {
+  const user = useSelector(selectUser);
+  const role = useSelector(selectRole);
+  const loading = useSelector(selectLoading);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   if (!user) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(role)) {
-    return <Navigate to="/unauthorized" />;
+  if (requireAdmin && role !== 'admin') {
+    return <Navigate to="/" replace />;
   }
 
-  return children;
+  return <Outlet />;
 };
 
 export default PrivateRoute;
