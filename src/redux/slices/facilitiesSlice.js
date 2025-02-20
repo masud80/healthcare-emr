@@ -4,6 +4,7 @@ const initialState = {
   facilities: [],
   userFacilities: [],
   selectedFacility: null,
+  selectedFacilities: [],
   loading: false,
   error: null,
 };
@@ -12,6 +13,11 @@ const facilitiesSlice = createSlice({
   name: 'facilities',
   initialState,
   reducers: {
+    setSelectedFacilities: (state, action) => {
+      state.selectedFacilities = action.payload;
+      state.loading = false;
+      state.error = null;
+    },
     setFacilities: (state, action) => {
       state.facilities = action.payload;
       state.loading = false;
@@ -42,6 +48,7 @@ export const {
   setFacilities,
   setUserFacilities,
   setSelectedFacility,
+  setSelectedFacilities,
   setLoading,
   setError,
 } = facilitiesSlice.actions;

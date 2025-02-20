@@ -1,80 +1,56 @@
-const { TextEncoder, TextDecoder } = require('util');
-global.TextEncoder = TextEncoder;
-global.TextDecoder = TextDecoder;
+// jest-dom adds custom jest matchers for asserting on DOM nodes.
+import '@testing-library/jest-dom';
 
-const { configure } = require('@testing-library/dom');
-configure({ testIdAttribute: 'data-testid' });
-
-require('@babel/runtime/regenerator');
-require('regenerator-runtime/runtime');
-require('core-js/stable');
-require('regenerator-runtime/runtime');
-
-// Import jest-dom using require.resolve to handle the path correctly
-require(require.resolve('@testing-library/jest-dom'));
-
-require('fake-indexeddb/auto');
-require('jest-fetch-mock').enableMocks();
-
-// Mock window.matchMedia
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: jest.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: jest.fn(),
-    removeListener: jest.fn(),
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-  })),
-});
-
-// Mock IntersectionObserver
-global.IntersectionObserver = class IntersectionObserver {
-  constructor() {}
-  observe() { return null; }
-  unobserve() { return null; }
-  disconnect() { return null; }
-};
-
-// Mock ResizeObserver
-global.ResizeObserver = class ResizeObserver {
-  constructor() {}
-  observe() { return null; }
-  unobserve() { return null; }
-  disconnect() { return null; }
-};
-
-// Mock Firebase
-jest.mock('./firebase/config', () => ({
-  auth: {
-    currentUser: { uid: 'testUserId' },
-    onAuthStateChanged: jest.fn(),
-    signInWithEmailAndPassword: jest.fn(),
-    signOut: jest.fn()
-  },
-  db: {
-    collection: jest.fn(() => ({
-      doc: jest.fn(),
-      add: jest.fn(),
-      get: jest.fn(),
-      where: jest.fn(),
-      onSnapshot: jest.fn()
-    }))
+// Mock the entire @mui/x-date-pickers module
+jest.mock('@mui/x-date-pickers', () => ({
+  DatePicker: ({ children, ...props }) => <div {...props}>{children}</div>,
+  LocalizationProvider: ({ children, ...props }) => <div {...props}>{children}</div>,
+  AdapterDateFns: class {
+    constructor() {}
+    date() { return new Date(); }
+    format() { return ''; }
+    parse() { return new Date(); }
   }
 }));
 
-// Mock Material-UI components
-jest.mock('@mui/material', () => ({
-  ...jest.requireActual('@mui/material'),
-  useMediaQuery: jest.fn(() => false)
+// Mock date-fns
+jest.mock('date-fns', () => ({
+  format: jest.fn(date => date.toISOString()),
+  parse: jest.fn(),
+  isValid: jest.fn(() => true),
+  isDate: jest.fn(() => true),
+  _lib: {
+    format: {
+      longFormatters: {}
+    }
+  }
 }));
 
-// Mock Redux store
-jest.mock('react-redux', () => ({
-  ...jest.requireActual('react-redux'),
-  useDispatch: jest.fn(),
-  useSelector: jest.fn()
+// Mock firebase
+jest.mock('firebase/auth', () => ({
+  getAuth: jest.fn(),
+  signInWithEmailAndPassword: jest.fn(),
+  createUserWithEmailAndPassword: jest.fn(),
+  signOut: jest.fn(),
+  onAuthStateChanged: jest.fn()
 }));
+
+jest.mock('firebase/firestore', () => ({
+  getFirestore: jest.fn(),
+  collection: jest.fn(),
+  doc: jest.fn(),
+  getDocs: jest.fn(),
+  getDoc: jest.fn(),
+  setDoc: jest.fn(),
+  addDoc: jest.fn(),
+  updateDoc: jest.fn(),
+  deleteDoc: jest.fn(),
+  query: jest.fn(),
+  where: jest.fn()
+}));
+
+// Mock window.confirm
+window.confirm = jest.fn(() => true);
+
+// Suppress console errors during tests
+console.error = jest.fn();

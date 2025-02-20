@@ -1,77 +1,37 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { collection, getDocs, doc, setDoc, deleteDoc, query, where, addDoc } from 'firebase/firestore';
-import { setFacilities } from '../../redux/slices/facilitiesSlice';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth, db } from '../../firebase/config';
-import AssignFacilityTest from './AssignFacilityTest';
-import {
-  Container,
-  Paper,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  IconButton,
-  Box,
-  Alert,
-  FormHelperText,
-  Checkbox,
-  FormControlLabel,
-} from '@mui/material';
-import { Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
-import { useFormik } from 'formik';
-import * as yup from 'yup';
-
-const validationSchema = yup.object({
-  email: yup.string().email('Invalid email').required('Email is required'),
-  password: yup.string().min(6, 'Password must be at least 6 characters').required('Password is required'),
-  name: yup.string().required('Name is required'),
-  role: yup.string().required('Role is required'),
-  facilities: yup.array().min(1, 'At least one facility must be selected').required('Facilities are required'),
-});
+import { useState, useEffect } from 'react';
+import { collection, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { useSelector } from 'react-redux';
+import { selectRole } from '../../redux/slices/authSlice';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { db } from '../../firebase/config';
+import '../../styles/components.css';
+import '../../styles/userManagement.css';
 
 const UserManagement = () => {
-  const dispatch = useDispatch();
-  const { role } = useSelector((state) => state.auth);
-  const { facilities } = useSelector((state) => state.facilities);
+  const userRole = useSelector(selectRole);
   const [users, setUsers] = useState([]);
-  const [openDialog, setOpenDialog] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [userFacilities, setUserFacilities] = useState({});
+  const [roleUpdate, setRoleUpdate] = useState('');
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [showEditUser, setShowEditUser] = useState(null);
+  const [newUser, setNewUser] = useState({
+    email: '',
+    password: '',
+    name: '',
+    role: 'user'
+  });
+  const [editingUser, setEditingUser] = useState({
+    name: '',
+    email: ''
+  });
 
-  const fetchFacilities = useCallback(async () => {
-    try {
-      const facilitiesSnapshot = await getDocs(collection(db, 'facilities'));
-      const facilitiesData = facilitiesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      dispatch(setFacilities(facilitiesData));
-    } catch (error) {
-      console.error('Error fetching facilities:', error);
-      setError('Failed to fetch facilities');
-    }
-  }, [dispatch]);
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
-  const fetchUsers = useCallback(async () => {
-    console.log('Fetching users from Firestore...');
-    setError(null);
-    setLoading(true);
+  const fetchUsers = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, 'users'));
       const userList = querySnapshot.docs.map(doc => ({
@@ -79,383 +39,305 @@ const UserManagement = () => {
         ...doc.data()
       }));
       setUsers(userList);
-
-      // Fetch user facilities
-      const userFacilitiesMap = {};
-      const userFacilitiesPromises = userList.map(async user => {
-        try {
-          const userFacilitiesSnapshot = await getDocs(
-            query(collection(db, 'user_facilities'), where('userId', '==', user.id))
-          );
-          userFacilitiesMap[user.id] = userFacilitiesSnapshot.docs.map(doc => doc.data().facilityId);
-        } catch (error) {
-          console.error(`Error fetching facilities for user ${user.id}:`, error);
-          userFacilitiesMap[user.id] = [];
-        }
-      });
-      
-      await Promise.all(userFacilitiesPromises);
-      setUserFacilities(userFacilitiesMap);
-      setLoading(false);
     } catch (error) {
       console.error('Error fetching users:', error);
       setError('Failed to fetch users');
+    } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        await fetchFacilities();
-        await fetchUsers();
-      } catch (error) {
-        console.error('Error loading data:', error);
-        setError('Failed to load data');
-      }
-    };
-    loadData();
-  }, [fetchFacilities, fetchUsers]);
-
-  const formik = useFormik({
-    initialValues: {
-      email: selectedUser?.email || '',
-      password: '',
-      name: selectedUser?.name || '',
-      role: selectedUser?.role || 'nurse',
-      facilities: selectedUser?.facilities || [],
-    },
-    validationSchema,
-    enableReinitialize: true,
-    onSubmit: async (values, { resetForm, setSubmitting }) => {
-      setError(null);
-      setLoading(true);
-      try {
-        if (selectedUser) {
-          // Update existing user
-          await setDoc(doc(db, 'users', selectedUser.id), {
-            email: values.email,
-            name: values.name,
-            role: values.role,
-          });
-
-          // Update user facilities
-          const userFacilitiesRef = collection(db, 'user_facilities');
-          
-          try {
-            // First, get existing facility assignments
-            const userFacilitiesSnapshot = await getDocs(
-              query(userFacilitiesRef, where('userId', '==', selectedUser.id))
-            );
-            
-            // Delete all existing facility assignments first
-            const deletePromises = userFacilitiesSnapshot.docs.map(doc => deleteDoc(doc.ref));
-            await Promise.all(deletePromises);
-            
-            // Add all selected facilities
-            for (const facilityId of values.facilities) {
-              await addDoc(userFacilitiesRef, {
-                userId: selectedUser.id,
-                facilityId: facilityId,
-                assignedAt: new Date().toISOString()
-              });
-            }
-            
-            console.log(`Updated facilities for user ${selectedUser.id}:`, values.facilities);
-          } catch (error) {
-            console.error('Error updating user facilities:', error);
-            throw error;
-          }
-          
-          // Update local state and refetch to ensure data is current
-          await fetchUsers();
-        } else {
-          // Create new user
-          const userCredential = await createUserWithEmailAndPassword(
-            auth,
-            values.email,
-            values.password
-          );
-
-          await setDoc(doc(db, 'users', userCredential.user.uid), {
-            email: values.email,
-            name: values.name,
-            role: values.role,
-          });
-
-          // Add facility assignments for new user
-          const userFacilitiesRef = collection(db, 'user_facilities');
-          try {
-            for (const facilityId of values.facilities) {
-              await addDoc(userFacilitiesRef, {
-                userId: userCredential.user.uid,
-                facilityId: facilityId,
-                assignedAt: new Date().toISOString()
-              });
-            }
-            console.log(`Added facilities for new user ${userCredential.user.uid}:`, values.facilities);
-          } catch (error) {
-            console.error('Error adding user facilities:', error);
-            throw error;
-          }
-          
-          // Update local state and refetch to ensure data is current
-          await fetchUsers();
-        }
-
-        resetForm();
-        setSelectedUser(null);
-        setOpenDialog(false);
-      } catch (error) {
-        console.error('Error saving user:', error);
-        setError(error.message || 'Failed to save user');
-      } finally {
-        setLoading(false);
-        setSubmitting(false);
-      }
-    },
-  });
-
-  const handleEdit = async (user) => {
+  const handleRoleUpdate = async (userId, newRole) => {
+    if (userRole !== 'admin') {
+      setError('Only administrators can update user roles');
+      return;
+    }
     try {
-      // Fetch current facilities for the user
-      const userFacilitiesRef = collection(db, 'user_facilities');
-      const userFacilitiesSnapshot = await getDocs(
-        query(userFacilitiesRef, where('userId', '==', user.id))
-      );
-      const currentFacilities = userFacilitiesSnapshot.docs.map(doc => doc.data().facilityId);
-      
-      setSelectedUser({
-        ...user,
-        facilities: currentFacilities
+      await updateDoc(doc(db, 'users', userId), {
+        role: newRole
       });
-      setOpenDialog(true);
-      console.log('Current user facilities:', currentFacilities);
+      setUsers(users.map(user => 
+        user.id === userId ? { ...user, role: newRole } : user
+      ));
+      setSelectedUser(null);
+      setRoleUpdate('');
     } catch (error) {
-      console.error('Error fetching user facilities:', error);
-      setError('Failed to fetch user facilities');
+      console.error('Error updating role:', error);
+      setError('Failed to update role');
     }
   };
 
-  const handleDelete = async (userId) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      try {
-        // Delete user document
-        await deleteDoc(doc(db, 'users', userId));
-        
-        // Delete user's facility assignments
-        const userFacilitiesRef = collection(db, 'user_facilities');
-        const userFacilitiesSnapshot = await getDocs(
-          query(userFacilitiesRef, where('userId', '==', userId))
-        );
-        
-        const deletePromises = userFacilitiesSnapshot.docs.map(doc => deleteDoc(doc.ref));
-        await Promise.all(deletePromises);
-        
-        // Update local state
-        setUsers(users.filter(user => user.id !== userId));
-        setUserFacilities(prev => {
-          const newState = { ...prev };
-          delete newState[userId];
-          return newState;
-        });
-      } catch (error) {
-        console.error('Error deleting user:', error);
-        setError('Failed to delete user');
-      }
+  const handleAddUser = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    
+    if (userRole !== 'admin') {
+      setError('Only administrators can add new users');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const functions = getFunctions();
+      const createUserFunction = httpsCallable(functions, 'createUser');
+      
+      await createUserFunction(newUser);
+      
+      setNewUser({
+        email: '',
+        password: '',
+        name: '',
+        role: 'user'
+      });
+      setShowAddUser(false);
+      await fetchUsers();
+    } catch (error) {
+      console.error('Error adding user:', error);
+      setError(error instanceof Error ? error.message : 'Failed to create user');
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (role !== 'admin') {
-    return (
-      <Container>
-        <Typography>You do not have permission to access this page.</Typography>
-      </Container>
-    );
+  const handleEditUser = async (userId) => {
+    if (userRole !== 'admin') {
+      setError('Only administrators can edit users');
+      return;
+    }
+    try {
+      await updateDoc(doc(db, 'users', userId), {
+        name: editingUser.name,
+        email: editingUser.email
+      });
+      
+      setUsers(users.map(user => 
+        user.id === userId 
+          ? { ...user, name: editingUser.name, email: editingUser.email }
+          : user
+      ));
+      setShowEditUser(null);
+      setEditingUser({ name: '', email: '' });
+    } catch (error) {
+      console.error('Error updating user:', error);
+      setError('Failed to update user');
+    }
+  };
+
+  const startEditingUser = (user) => {
+    setEditingUser({
+      name: user.name || '',
+      email: user.email
+    });
+    setShowEditUser(user.id);
+  };
+
+  if (loading) {
+    return <div className="container"><p>Loading users...</p></div>;
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          User Management
-        </Typography>
-        <Button
-          variant="contained"
-          onClick={() => {
-            setSelectedUser(null);
-            setOpenDialog(true);
-          }}
-        >
-          Add New User
-        </Button>
-      </Box>
-
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h5" gutterBottom>
-          Testing Tools
-        </Typography>
-        <AssignFacilityTest />
-      </Box>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Role</TableCell>
-              <TableCell>Facilities</TableCell>
-              <TableCell align="center">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {users.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell>{user.name}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>{user.role}</TableCell>
-                <TableCell>
-                  {userFacilities[user.id]?.map(facilityId => 
-                    facilities.find(f => f.id === facilityId)?.name
-                  ).join(', ')}
-                </TableCell>
-                <TableCell align="center">
-                  <IconButton
-                    color="primary"
-                    onClick={() => handleEdit(user)}
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton
-                    color="error"
-                    onClick={() => handleDelete(user.id)}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-        <form onSubmit={formik.handleSubmit}>
-          <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6">
-              {selectedUser ? 'Edit User' : 'Add New User'}
-            </Typography>
-            <Box>
-              <Button 
-                onClick={() => setOpenDialog(false)} 
-                disabled={loading}
-                sx={{ mr: 1 }}
+    <div className="container">
+      <div className="flex flex-between flex-center">
+        <h1 className="title">User Management</h1>
+        {userRole === 'admin' ? (
+          <button
+            className="button button-primary"
+            onClick={() => setShowAddUser(true)}
+          >
+            + Add User
+          </button>
+        ) : (
+          <p className="error-message">Only administrators can add new users</p>
+        )}
+      </div>
+      
+      {error && <p className="error-message">{error}</p>}
+      
+      {showAddUser && (
+        <div className="paper mb-4">
+          <h2>Add New User</h2>
+          <form onSubmit={handleAddUser} className="form">
+            <div className="form-group">
+              <label>Name:</label>
+              <input
+                type="text"
+                value={newUser.name}
+                onChange={(e) => setNewUser({...newUser, name: e.target.value})}
+                required
+                className="input"
+              />
+            </div>
+            <div className="form-group">
+              <label>Email:</label>
+              <input
+                type="email"
+                value={newUser.email}
+                onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                required
+                className="input"
+              />
+            </div>
+            <div className="form-group">
+              <label>Password:</label>
+              <input
+                type="password"
+                value={newUser.password}
+                onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                required
+                className="input"
+              />
+            </div>
+            <div className="form-group">
+              <label>Role:</label>
+              <select
+                value={newUser.role}
+                onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                className="select"
+              >
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+                <option value="facility_admin">Facility Admin</option>
+                <option value="doctor">Doctor</option>
+                <option value="nurse">Nurse</option>
+              </select>
+            </div>
+            <div className="form-buttons">
+              <button type="submit" className="button button-primary">Add User</button>
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={() => setShowAddUser(false)}
               >
                 Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                variant="contained" 
-                disabled={loading}
-              >
-                {loading ? 'Saving...' : selectedUser ? 'Update' : 'Create'}
-              </Button>
-            </Box>
-          </DialogTitle>
-          <DialogContent>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-              <TextField
-                fullWidth
-                name="email"
-                label="Email"
-                value={formik.values.email}
-                onChange={formik.handleChange}
-                error={formik.touched.email && Boolean(formik.errors.email)}
-                helperText={formik.touched.email && formik.errors.email}
-              />
-              {!selectedUser && (
-                <TextField
-                  fullWidth
-                  name="password"
-                  label="Password"
-                  type="password"
-                  value={formik.values.password}
-                  onChange={formik.handleChange}
-                  error={formik.touched.password && Boolean(formik.errors.password)}
-                  helperText={formik.touched.password && formik.errors.password}
-                />
-              )}
-              <TextField
-                fullWidth
-                name="name"
-                label="Name"
-                value={formik.values.name}
-                onChange={formik.handleChange}
-                error={formik.touched.name && Boolean(formik.errors.name)}
-                helperText={formik.touched.name && formik.errors.name}
-              />
-              <FormControl fullWidth>
-                <InputLabel>Role</InputLabel>
-                <Select
-                  name="role"
-                  value={formik.values.role}
-                  onChange={formik.handleChange}
-                  error={formik.touched.role && Boolean(formik.errors.role)}
-                >
-                  <MenuItem value="admin">Admin</MenuItem>
-                  <MenuItem value="doctor">Doctor</MenuItem>
-                  <MenuItem value="nurse">Nurse</MenuItem>
-                </Select>
-              </FormControl>
-              <FormControl 
-                fullWidth 
-                error={formik.touched.facilities && Boolean(formik.errors.facilities)}
-                component="fieldset"
-              >
-                <Typography variant="subtitle1" gutterBottom>Facilities</Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, ml: 1 }}>
-                  {facilities.map((facility) => (
-                    <FormControlLabel
-                      key={facility.id}
-                      control={
-                        <Checkbox
-                          checked={formik.values.facilities.includes(facility.id)}
-                          onChange={(event) => {
-                            const currentFacilities = [...formik.values.facilities];
-                            if (event.target.checked) {
-                              currentFacilities.push(facility.id);
-                            } else {
-                              const index = currentFacilities.indexOf(facility.id);
-                              if (index > -1) {
-                                currentFacilities.splice(index, 1);
-                              }
-                            }
-                            formik.setFieldValue('facilities', currentFacilities);
-                            console.log('Selected facilities:', currentFacilities);
-                          }}
-                          name={`facility-${facility.id}`}
-                        />
-                      }
-                      label={facility.name}
-                    />
-                  ))}
-                </Box>
-                {formik.touched.facilities && formik.errors.facilities && (
-                  <FormHelperText error>{formik.errors.facilities}</FormHelperText>
-                )}
-              </FormControl>
-            </Box>
-          </DialogContent>
-        </form>
-      </Dialog>
-    </Container>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+      
+      <div className="paper">
+        <div className="table-container">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(user => (
+                <tr key={user.id}>
+                  <td>
+                    {showEditUser === user.id ? (
+                      <input
+                        type="text"
+                        value={editingUser.name}
+                        onChange={(e) => setEditingUser({...editingUser, name: e.target.value})}
+                        className="input"
+                      />
+                    ) : (
+                      user.name || 'N/A'
+                    )}
+                  </td>
+                  <td>
+                    {showEditUser === user.id ? (
+                      <input
+                        type="email"
+                        value={editingUser.email}
+                        onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
+                        className="input"
+                      />
+                    ) : (
+                      user.email
+                    )}
+                  </td>
+                  <td>{user.role || 'user'}</td>
+                  <td>
+                    <div className="flex gap-2">
+                      {selectedUser === user.id ? (
+                        <>
+                          <select
+                            className="select"
+                            value={roleUpdate}
+                            onChange={(e) => setRoleUpdate(e.target.value)}
+                          >
+                            <option value="">Select Role</option>
+                            <option value="admin">Admin</option>
+                            <option value="facility_admin">Facility Admin</option>
+                            <option value="doctor">Doctor</option>
+                            <option value="nurse">Nurse</option>
+                            <option value="user">User</option>
+                          </select>
+                          <button
+                            className="button button-primary"
+                            onClick={() => handleRoleUpdate(user.id, roleUpdate)}
+                            disabled={!roleUpdate}
+                          >
+                            Save Role
+                          </button>
+                          <button
+                            className="button button-secondary"
+                            onClick={() => {
+                              setSelectedUser(null);
+                              setRoleUpdate('');
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : showEditUser === user.id ? (
+                        <>
+                          <button
+                            className="button button-primary"
+                            onClick={() => handleEditUser(user.id)}
+                          >
+                            Save
+                          </button>
+                          <button
+                            className="button button-secondary"
+                            onClick={() => {
+                              setShowEditUser(null);
+                              setEditingUser({ name: '', email: '' });
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          {userRole === 'admin' && (
+                            <>
+                              <button
+                                className="button button-secondary"
+                                onClick={() => startEditingUser(user)}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="button button-secondary"
+                                onClick={() => {
+                                  setSelectedUser(user.id);
+                                  setRoleUpdate(user.role || 'user');
+                                }}
+                              >
+                                Change Role
+                              </button>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   );
 };
 

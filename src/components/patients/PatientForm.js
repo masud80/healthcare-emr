@@ -1,327 +1,264 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { setError } from '../../redux/slices/patientsSlice';
-import {
-  Container,
-  Paper,
-  Typography,
-  Grid,
-  TextField,
-  Button,
-  Box,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Chip,
-} from '@mui/material';
-import { useFormik } from 'formik';
-import * as yup from 'yup';
+import '../../styles/components.css';
 
-const validationSchema = yup.object({
-  name: yup.string().required('Name is required'),
-  dateOfBirth: yup.string().required('Date of birth is required'),
-  gender: yup.string().required('Gender is required'),
-  contact: yup.string().required('Contact number is required'),
-  email: yup.string().email('Invalid email').required('Email is required'),
-  address: yup.string().required('Address is required'),
-  bloodType: yup.string().required('Blood type is required'),
-  emergencyContact: yup.object({
-    name: yup.string().required('Emergency contact name is required'),
-    relationship: yup.string().required('Relationship is required'),
-    phone: yup.string().required('Emergency contact phone is required'),
-  }),
-});
-
-const PatientForm = ({ patient }) => {
+const PatientForm = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const [allergies, setAllergies] = useState(patient?.allergies || []);
-  const [newAllergy, setNewAllergy] = useState('');
-  const [chronicConditions, setChronicConditions] = useState(patient?.chronicConditions || []);
-  const [newCondition, setNewCondition] = useState('');
-
-  const formik = useFormik({
-    initialValues: {
-      name: patient?.name || '',
-      dateOfBirth: patient?.dateOfBirth || '',
-      gender: patient?.gender || '',
-      contact: patient?.contact || '',
-      email: patient?.email || '',
-      address: patient?.address || '',
-      bloodType: patient?.bloodType || '',
-      emergencyContact: {
-        name: patient?.emergencyContact?.name || '',
-        relationship: patient?.emergencyContact?.relationship || '',
-        phone: patient?.emergencyContact?.phone || '',
-      },
+  const [formData, setFormData] = useState({
+    name: '',
+    dateOfBirth: '',
+    gender: '',
+    contact: '',
+    email: '',
+    address: '',
+    emergencyContact: {
+      name: '',
+      relationship: '',
+      phone: '',
     },
-    validationSchema,
-    onSubmit: async (values) => {
-      try {
-        const patientData = {
-          ...values,
-          allergies,
-          chronicConditions,
-          createdAt: patient?.createdAt || new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-
-        if (patient?.id) {
-          await updateDoc(doc(db, 'patients', patient.id), patientData);
-        } else {
-          await addDoc(collection(db, 'patients'), patientData);
-        }
-
-        navigate('/patients');
-      } catch (error) {
-        dispatch(setError(error.message));
-      }
-    },
+    bloodType: '',
+    allergies: '',
+    chronicConditions: '',
   });
 
-  const handleAddAllergy = () => {
-    if (newAllergy.trim()) {
-      setAllergies([...allergies, newAllergy.trim()]);
-      setNewAllergy('');
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      setFormData(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [child]: value
+        }
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
     }
   };
 
-  const handleRemoveAllergy = (index) => {
-    setAllergies(allergies.filter((_, i) => i !== index));
-  };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      // Convert string arrays to actual arrays
+      const processedData = {
+        ...formData,
+        allergies: formData.allergies ? formData.allergies.split(',').map(item => item.trim()) : [],
+        chronicConditions: formData.chronicConditions ? formData.chronicConditions.split(',').map(item => item.trim()) : [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
-  const handleAddCondition = () => {
-    if (newCondition.trim()) {
-      setChronicConditions([...chronicConditions, newCondition.trim()]);
-      setNewCondition('');
+      await addDoc(collection(db, 'patients'), processedData);
+      navigate('/patients');
+    } catch (error) {
+      console.error('Error adding patient:', error);
     }
-  };
-
-  const handleRemoveCondition = (index) => {
-    setChronicConditions(chronicConditions.filter((_, i) => i !== index));
   };
 
   return (
-    <Container maxWidth="md">
-      <Paper sx={{ p: 3, mt: 3 }}>
-        <Typography variant="h5" gutterBottom>
-          {patient ? 'Edit Patient' : 'Add New Patient'}
-        </Typography>
-        <form onSubmit={formik.handleSubmit}>
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                name="name"
-                label="Full Name"
-                value={formik.values.name}
-                onChange={formik.handleChange}
-                error={formik.touched.name && Boolean(formik.errors.name)}
-                helperText={formik.touched.name && formik.errors.name}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                name="dateOfBirth"
-                label="Date of Birth"
-                type="date"
-                value={formik.values.dateOfBirth}
-                onChange={formik.handleChange}
-                error={formik.touched.dateOfBirth && Boolean(formik.errors.dateOfBirth)}
-                helperText={formik.touched.dateOfBirth && formik.errors.dateOfBirth}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Gender</InputLabel>
-                <Select
-                  name="gender"
-                  value={formik.values.gender}
-                  onChange={formik.handleChange}
-                  error={formik.touched.gender && Boolean(formik.errors.gender)}
-                >
-                  <MenuItem value="Male">Male</MenuItem>
-                  <MenuItem value="Female">Female</MenuItem>
-                  <MenuItem value="Other">Other</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                name="contact"
-                label="Contact Number"
-                value={formik.values.contact}
-                onChange={formik.handleChange}
-                error={formik.touched.contact && Boolean(formik.errors.contact)}
-                helperText={formik.touched.contact && formik.errors.contact}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                name="email"
-                label="Email"
-                value={formik.values.email}
-                onChange={formik.handleChange}
-                error={formik.touched.email && Boolean(formik.errors.email)}
-                helperText={formik.touched.email && formik.errors.email}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                name="address"
-                label="Address"
-                multiline
-                rows={2}
-                value={formik.values.address}
-                onChange={formik.handleChange}
-                error={formik.touched.address && Boolean(formik.errors.address)}
-                helperText={formik.touched.address && formik.errors.address}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Blood Type</InputLabel>
-                <Select
-                  name="bloodType"
-                  value={formik.values.bloodType}
-                  onChange={formik.handleChange}
-                  error={formik.touched.bloodType && Boolean(formik.errors.bloodType)}
-                >
-                  {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((type) => (
-                    <MenuItem key={type} value={type}>{type}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+    <div className="container">
+      <h1 className="title">Add New Patient</h1>
+      <form onSubmit={handleSubmit} className="paper">
+        <div className="grid grid-2-cols">
+          <div className="form-control">
+            <label htmlFor="name">Full Name</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className="input"
+              required
+            />
+          </div>
 
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>Emergency Contact</Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    fullWidth
-                    name="emergencyContact.name"
-                    label="Name"
-                    value={formik.values.emergencyContact.name}
-                    onChange={formik.handleChange}
-                    error={
-                      formik.touched.emergencyContact?.name &&
-                      Boolean(formik.errors.emergencyContact?.name)
-                    }
-                    helperText={
-                      formik.touched.emergencyContact?.name &&
-                      formik.errors.emergencyContact?.name
-                    }
-                  />
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    fullWidth
-                    name="emergencyContact.relationship"
-                    label="Relationship"
-                    value={formik.values.emergencyContact.relationship}
-                    onChange={formik.handleChange}
-                    error={
-                      formik.touched.emergencyContact?.relationship &&
-                      Boolean(formik.errors.emergencyContact?.relationship)
-                    }
-                    helperText={
-                      formik.touched.emergencyContact?.relationship &&
-                      formik.errors.emergencyContact?.relationship
-                    }
-                  />
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    fullWidth
-                    name="emergencyContact.phone"
-                    label="Phone"
-                    value={formik.values.emergencyContact.phone}
-                    onChange={formik.handleChange}
-                    error={
-                      formik.touched.emergencyContact?.phone &&
-                      Boolean(formik.errors.emergencyContact?.phone)
-                    }
-                    helperText={
-                      formik.touched.emergencyContact?.phone &&
-                      formik.errors.emergencyContact?.phone
-                    }
-                  />
-                </Grid>
-              </Grid>
-            </Grid>
+          <div className="form-control">
+            <label htmlFor="dateOfBirth">Date of Birth</label>
+            <input
+              type="date"
+              id="dateOfBirth"
+              name="dateOfBirth"
+              value={formData.dateOfBirth}
+              onChange={handleChange}
+              className="input"
+              required
+            />
+          </div>
 
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>Allergies</Typography>
-              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                <TextField
-                  value={newAllergy}
-                  onChange={(e) => setNewAllergy(e.target.value)}
-                  label="Add Allergy"
-                  size="small"
-                />
-                <Button variant="contained" onClick={handleAddAllergy}>
-                  Add
-                </Button>
-              </Box>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                {allergies.map((allergy, index) => (
-                  <Chip
-                    key={index}
-                    label={allergy}
-                    onDelete={() => handleRemoveAllergy(index)}
-                  />
-                ))}
-              </Box>
-            </Grid>
+          <div className="form-control">
+            <label htmlFor="gender">Gender</label>
+            <select
+              id="gender"
+              name="gender"
+              value={formData.gender}
+              onChange={handleChange}
+              className="select"
+              required
+            >
+              <option value="">Select Gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
 
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>Chronic Conditions</Typography>
-              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                <TextField
-                  value={newCondition}
-                  onChange={(e) => setNewCondition(e.target.value)}
-                  label="Add Condition"
-                  size="small"
-                />
-                <Button variant="contained" onClick={handleAddCondition}>
-                  Add
-                </Button>
-              </Box>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                {chronicConditions.map((condition, index) => (
-                  <Chip
-                    key={index}
-                    label={condition}
-                    onDelete={() => handleRemoveCondition(index)}
-                  />
-                ))}
-              </Box>
-            </Grid>
+          <div className="form-control">
+            <label htmlFor="contact">Contact Number</label>
+            <input
+              type="tel"
+              id="contact"
+              name="contact"
+              value={formData.contact}
+              onChange={handleChange}
+              className="input"
+              required
+            />
+          </div>
 
-            <Grid item xs={12}>
-              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-                <Button onClick={() => navigate('/patients')}>
-                  Cancel
-                </Button>
-                <Button type="submit" variant="contained">
-                  {patient ? 'Update Patient' : 'Add Patient'}
-                </Button>
-              </Box>
-            </Grid>
-          </Grid>
-        </form>
-      </Paper>
-    </Container>
+          <div className="form-control">
+            <label htmlFor="email">Email</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              className="input"
+              required
+            />
+          </div>
+
+          <div className="form-control">
+            <label htmlFor="address">Address</label>
+            <input
+              type="text"
+              id="address"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              className="input"
+              required
+            />
+          </div>
+        </div>
+
+        <h2 className="subtitle">Emergency Contact</h2>
+        <div className="grid grid-2-cols">
+          <div className="form-control">
+            <label htmlFor="emergencyContact.name">Name</label>
+            <input
+              type="text"
+              id="emergencyContact.name"
+              name="emergencyContact.name"
+              value={formData.emergencyContact.name}
+              onChange={handleChange}
+              className="input"
+              required
+            />
+          </div>
+
+          <div className="form-control">
+            <label htmlFor="emergencyContact.relationship">Relationship</label>
+            <input
+              type="text"
+              id="emergencyContact.relationship"
+              name="emergencyContact.relationship"
+              value={formData.emergencyContact.relationship}
+              onChange={handleChange}
+              className="input"
+              required
+            />
+          </div>
+
+          <div className="form-control">
+            <label htmlFor="emergencyContact.phone">Phone</label>
+            <input
+              type="tel"
+              id="emergencyContact.phone"
+              name="emergencyContact.phone"
+              value={formData.emergencyContact.phone}
+              onChange={handleChange}
+              className="input"
+              required
+            />
+          </div>
+        </div>
+
+        <h2 className="subtitle">Medical Information</h2>
+        <div className="grid grid-2-cols">
+          <div className="form-control">
+            <label htmlFor="bloodType">Blood Type</label>
+            <select
+              id="bloodType"
+              name="bloodType"
+              value={formData.bloodType}
+              onChange={handleChange}
+              className="select"
+              required
+            >
+              <option value="">Select Blood Type</option>
+              <option value="A+">A+</option>
+              <option value="A-">A-</option>
+              <option value="B+">B+</option>
+              <option value="B-">B-</option>
+              <option value="AB+">AB+</option>
+              <option value="AB-">AB-</option>
+              <option value="O+">O+</option>
+              <option value="O-">O-</option>
+            </select>
+          </div>
+
+          <div className="form-control">
+            <label htmlFor="allergies">Allergies (comma-separated)</label>
+            <input
+              type="text"
+              id="allergies"
+              name="allergies"
+              value={formData.allergies}
+              onChange={handleChange}
+              className="input"
+              placeholder="e.g., Peanuts, Penicillin"
+            />
+          </div>
+
+          <div className="form-control">
+            <label htmlFor="chronicConditions">Chronic Conditions (comma-separated)</label>
+            <input
+              type="text"
+              id="chronicConditions"
+              name="chronicConditions"
+              value={formData.chronicConditions}
+              onChange={handleChange}
+              className="input"
+              placeholder="e.g., Diabetes, Hypertension"
+            />
+          </div>
+        </div>
+
+        <div className="dialog-actions">
+          <button
+            type="button"
+            onClick={() => navigate('/patients')}
+            className="button button-secondary"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="button button-primary"
+          >
+            Add Patient
+          </button>
+        </div>
+      </form>
+    </div>
   );
 };
 

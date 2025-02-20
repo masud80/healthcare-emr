@@ -1,45 +1,55 @@
-const React = require('react');
-const { render } = require('@testing-library/react');
-const { Provider } = require('react-redux');
-const { BrowserRouter } = require('react-router-dom');
-const { configureStore } = require('@reduxjs/toolkit');
-const { default: authReducer } = require('../../redux/slices/authSlice');
-const { default: facilitiesReducer } = require('../../redux/slices/facilitiesSlice');
-const { default: patientsReducer } = require('../../redux/slices/patientsSlice');
+import React from 'react';
+import { render } from '@testing-library/react';
+import { Provider } from 'react-redux';
+import { BrowserRouter } from 'react-router-dom';
+import { configureStore } from '@reduxjs/toolkit';
+import authReducer from '../../redux/slices/authSlice';
+import facilitiesReducer from '../../redux/slices/facilitiesSlice';
+import patientsReducer from '../../redux/slices/patientsSlice';
+import appointmentsReducer from '../../redux/slices/appointmentsSlice';
 
 // Mock initial states
-const initialAuthState = {
-  user: { uid: 'testUserId', role: 'admin' },
+export const initialAuthState = {
+  user: { uid: 'testUserId', email: 'test@example.com' },
+  role: 'admin',
   loading: false,
   error: null
 };
 
-const initialFacilitiesState = {
+export const initialFacilitiesState = {
   facilities: [],
   loading: false,
   error: null
 };
 
-const initialPatientsState = {
+export const initialPatientsState = {
   patients: [],
   loading: false,
   error: null
 };
 
+export const initialAppointmentsState = {
+  appointments: [],
+  loading: false,
+  error: null
+};
+
 // Custom render function that includes Redux provider and Router
-function renderWithProviders(
+export function renderWithProviders(
   ui,
   {
     preloadedState = {
       auth: initialAuthState,
       facilities: initialFacilitiesState,
-      patients: initialPatientsState
+      patients: initialPatientsState,
+      appointments: initialAppointmentsState
     },
     store = configureStore({
       reducer: {
         auth: authReducer,
         facilities: facilitiesReducer,
-        patients: patientsReducer
+        patients: patientsReducer,
+        appointments: appointmentsReducer
       },
       preloadedState,
       middleware: (getDefaultMiddleware) =>
@@ -64,14 +74,14 @@ function renderWithProviders(
 }
 
 // Mock data
-const mockFacility = {
+export const mockFacility = {
   id: '1',
   name: 'Test Facility',
   address: '123 Test St',
   phone: '555-555-5555'
 };
 
-const mockPatient = {
+export const mockPatient = {
   id: '1', 
   name: 'Test Patient',
   dateOfBirth: '1990-01-01',
@@ -79,19 +89,9 @@ const mockPatient = {
   medicalHistory: []
 };
 
-const mockUser = {
+export const mockUser = {
   id: '1',
   email: 'test@example.com',
   role: 'doctor',
   facilities: []
-};
-
-module.exports = {
-  renderWithProviders,
-  mockFacility,
-  mockPatient,
-  mockUser,
-  initialAuthState,
-  initialFacilitiesState,
-  initialPatientsState
 };

@@ -1,63 +1,164 @@
-import React, { useState } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { useState } from 'react';
+import { collection, getDocs, updateDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { assignFacilityToUser } from '../../utils/assignFacilityToUser';
-import { Button, Container, Typography, Box, CircularProgress } from '@mui/material';
+import '../../styles/components.css';
 
 const AssignFacilityTest = () => {
-  const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [selectedUser, setSelectedUser] = useState('');
+  const [selectedFacility, setSelectedFacility] = useState('');
+  const [isFacilityAdmin, setIsFacilityAdmin] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [facilities, setFacilities] = useState([]);
 
-  const runTest = async () => {
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setStatus('Running test...');
-      
-      // First get a facility ID
-      const facilitiesSnapshot = await getDocs(collection(db, 'facilities'));
-      if (facilitiesSnapshot.empty) {
-        throw new Error('No facilities found');
-      }
-      
-      const facilityId = facilitiesSnapshot.docs[0].id;
-      const facilityName = facilitiesSnapshot.docs[0].data().name;
-      const userEmail = 'doctor@healthcare.com';
+      const [usersSnapshot, facilitiesSnapshot] = await Promise.all([
+        getDocs(collection(db, 'users')),
+        getDocs(collection(db, 'facilities'))
+      ]);
 
-      // Assign the facility to the user
-      await assignFacilityToUser(userEmail, facilityId);
-      setStatus(`Successfully assigned facility "${facilityName}" to user ${userEmail}`);
+      setUsers(usersSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })));
+
+      setFacilities(facilitiesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })));
     } catch (error) {
-      setStatus(`Test failed: ${error.message}`);
-      console.error('Test failed:', error);
+      console.error('Error fetching data:', error);
+      setError('Failed to fetch data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAssign = async () => {
+    if (!selectedUser || !selectedFacility) {
+      setError('Please select both a user and a facility');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const userRef = doc(db, 'users', selectedUser);
+      const userDoc = await getDoc(userRef);
+      const userData = userDoc.data();
+      
+      // If user is being made a facility admin, add to facilities array
+      if (isFacilityAdmin) {
+        const facilities = userData.facilities || [];
+        if (!facilities.includes(selectedFacility)) {
+          await updateDoc(userRef, {
+            facilities: [...facilities, selectedFacility],
+            role: 'facility_admin'
+          });
+        }
+      } else {
+        // If not admin, just set single facility
+        await updateDoc(userRef, {
+          facilityId: selectedFacility,
+          role: 'user'
+        });
+      }
+      setSuccess('Facility and role assigned successfully');
+      setSelectedUser('');
+      setSelectedFacility('');
+    } catch (error) {
+      console.error('Error assigning facility:', error);
+      setError('Failed to assign facility');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Container>
-      <Box sx={{ my: 4 }}>
-        <Typography variant="h6" gutterBottom>
-          Facility Assignment Test
-        </Typography>
-        <Button 
-          variant="contained" 
-          onClick={runTest}
+    <div className="container">
+      <div className="paper">
+        <h1 className="title">Assign Facility Test</h1>
+        
+        <button
+          className="button button-primary"
+          onClick={fetchData}
           disabled={loading}
-          sx={{ mb: 2 }}
         >
-          {loading ? <CircularProgress size={24} /> : 'Run Test'}
-        </Button>
-        {status && (
-          <Typography 
-            color={status.includes('Successfully') ? 'success.main' : 'error.main'} 
-            sx={{ mt: 2 }}
-          >
-            {status}
-          </Typography>
+          {loading ? 'Loading...' : 'Fetch Data'}
+        </button>
+
+        {error && (
+          <div className="error-message" style={{ color: '#f44336', marginBottom: '1rem' }}>
+            {error}
+          </div>
         )}
-      </Box>
-    </Container>
+        
+        {success && (
+          <div className="success-message" style={{ color: '#4caf50', marginBottom: '1rem' }}>
+            {success}
+          </div>
+        )}
+
+        <div className="form-control">
+          <label htmlFor="user">User</label>
+          <select
+            id="user"
+            className="select"
+            value={selectedUser}
+            onChange={(e) => setSelectedUser(e.target.value)}
+          >
+            <option value="">Select User</option>
+            {users.map(user => (
+              <option key={user.id} value={user.id}>
+                {user.email}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-control">
+          <label htmlFor="facility">Facility</label>
+          <select
+            id="facility"
+            className="select"
+            value={selectedFacility}
+            onChange={(e) => setSelectedFacility(e.target.value)}
+          >
+            <option value="">Select Facility</option>
+            {facilities.map(facility => (
+              <option key={facility.id} value={facility.id}>
+                {facility.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-control">
+          <label>
+            <input
+              type="checkbox"
+              checked={isFacilityAdmin}
+              onChange={(e) => setIsFacilityAdmin(e.target.checked)}
+            />
+            Assign as Facility Admin
+          </label>
+        </div>
+
+        <button
+          className="button button-primary"
+          onClick={handleAssign}
+          disabled={loading || !selectedUser || !selectedFacility}
+        >
+          {loading ? 'Assigning...' : 'Assign Facility'}
+        </button>
+      </div>
+    </div>
   );
 };
 

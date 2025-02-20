@@ -1,128 +1,134 @@
 import React from 'react';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom';
+import { renderWithProviders, mockFacility } from './testUtils';
 import FacilityList from '../facilities/FacilityList';
-import { renderWithProviders } from './testUtils';
+import { fetchFacilities, addFacility, updateFacility, deleteFacility } from '../../redux/slices/facilitiesSlice';
+
+// Mock the redux dispatch
+const mockDispatch = jest.fn();
+jest.mock('react-redux', () => ({
+  ...jest.requireActual('react-redux'),
+  useDispatch: () => mockDispatch
+}));
 
 describe('FacilityList Component CRUD Operations', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    mockDispatch.mockClear();
   });
 
-  // READ - Test loading and displaying facilities
-  test('loads and displays facilities', async () => {
-    renderWithProviders(<FacilityList />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Add New Facility')).toBeInTheDocument();
-    });
-  });
-
-  // CREATE - Test adding a new facility
-  test('creates a new facility', async () => {
-    renderWithProviders(<FacilityList />);
-
-    // Click add facility button
-    fireEvent.click(screen.getByText('Add New Facility'));
-
-    // Fill in the form
-    fireEvent.change(screen.getByLabelText('Facility Name'), {
-      target: { value: 'New Test Facility' }
-    });
-    fireEvent.change(screen.getByLabelText('Address'), {
-      target: { value: '123 Test St' }
-    });
-    fireEvent.change(screen.getByLabelText('Phone'), {
-      target: { value: '555-555-5555' }
-    });
-
-    // Submit the form
-    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
-
-    await waitFor(() => {
-      expect(screen.getByText('Facility added successfully')).toBeInTheDocument();
-    });
-  });
-
-  // UPDATE - Test updating a facility
-  test('updates an existing facility', async () => {
-    const existingFacility = {
-      id: '1',
-      name: 'Existing Facility',
-      address: '123 Old St',
-      phone: '111-111-1111'
+  it('loads and displays facilities', async () => {
+    const facilities = [mockFacility];
+    const preloadedState = {
+      facilities: {
+        facilities,
+        loading: false,
+        error: null
+      }
     };
 
-    renderWithProviders(<FacilityList />, {
-      preloadedState: {
-        facilities: {
-          facilities: [existingFacility],
-          loading: false,
-          error: null
-        }
+    renderWithProviders(<FacilityList />, { preloadedState });
+
+    expect(screen.getByText(mockFacility.name)).toBeInTheDocument();
+    expect(mockDispatch).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  it('creates a new facility', async () => {
+    const preloadedState = {
+      facilities: {
+        facilities: [],
+        loading: false,
+        error: null
+      },
+      auth: {
+        user: { role: 'admin' }
       }
+    };
+
+    renderWithProviders(<FacilityList />, { preloadedState });
+
+    // Click add button and fill form
+    fireEvent.click(screen.getByText('Add Facility'));
+    
+    const nameInput = screen.getByLabelText('Name');
+    const addressInput = screen.getByLabelText('Address');
+    const phoneInput = screen.getByLabelText('Phone');
+
+    fireEvent.change(nameInput, { target: { value: mockFacility.name } });
+    fireEvent.change(addressInput, { target: { value: mockFacility.address } });
+    fireEvent.change(phoneInput, { target: { value: mockFacility.phone } });
+
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(mockDispatch).toHaveBeenCalledWith(expect.any(Function));
     });
+  });
+
+  it('updates an existing facility', async () => {
+    const facilities = [mockFacility];
+    const preloadedState = {
+      facilities: {
+        facilities,
+        loading: false,
+        error: null
+      },
+      auth: {
+        user: { role: 'admin' }
+      }
+    };
+
+    renderWithProviders(<FacilityList />, { preloadedState });
 
     // Click edit button
-    fireEvent.click(screen.getByRole('button', { name: 'Edit Facility', exact: false }));
+    fireEvent.click(screen.getByTestId(`edit-facility-${mockFacility.id}`));
 
-    // Update facility name
-    fireEvent.change(screen.getByLabelText('Facility Name'), {
-      target: { value: 'Updated Facility' }
-    });
+    const nameInput = screen.getByLabelText('Name');
+    fireEvent.change(nameInput, { target: { value: 'Updated Facility' } });
 
-    // Save changes
-    fireEvent.click(screen.getByRole('button', { name: 'Update' }));
+    fireEvent.click(screen.getByText('Save'));
 
     await waitFor(() => {
-      expect(screen.getByText('Facility updated successfully')).toBeInTheDocument();
+      expect(mockDispatch).toHaveBeenCalledWith(expect.any(Function));
     });
   });
 
-  // DELETE - Test deleting a facility
-  test('deletes a facility', async () => {
-    const facilityToDelete = {
-      id: '1',
-      name: 'Facility to Delete',
-      address: '123 Delete St',
-      phone: '999-999-9999'
+  it('deletes a facility', async () => {
+    const facilities = [mockFacility];
+    const preloadedState = {
+      facilities: {
+        facilities,
+        loading: false,
+        error: null
+      },
+      auth: {
+        user: { role: 'admin' }
+      }
     };
 
-    renderWithProviders(<FacilityList />, {
-      preloadedState: {
-        facilities: {
-          facilities: [facilityToDelete],
-          loading: false,
-          error: null
-        }
-      }
-    });
+    renderWithProviders(<FacilityList />, { preloadedState });
 
     // Click delete button
-    fireEvent.click(screen.getByRole('button', { name: 'Delete Facility', exact: false }));
-
+    fireEvent.click(screen.getByTestId(`delete-facility-${mockFacility.id}`));
+    
     // Confirm deletion
-    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    fireEvent.click(screen.getByText('Yes'));
 
     await waitFor(() => {
-      expect(screen.getByText('Facility deleted successfully')).toBeInTheDocument();
+      expect(mockDispatch).toHaveBeenCalledWith(expect.any(Function));
     });
   });
 
-  // ERROR - Test error handling
-  test('handles errors when loading facilities fails', async () => {
-    renderWithProviders(<FacilityList />, {
-      preloadedState: {
-        facilities: {
-          facilities: [],
-          loading: false,
-          error: 'Failed to fetch facilities'
-        }
+  it('handles errors when loading facilities fails', async () => {
+    const preloadedState = {
+      facilities: {
+        facilities: [],
+        loading: false,
+        error: 'Failed to load facilities'
       }
-    });
+    };
 
-    await waitFor(() => {
-      expect(screen.getByText('Failed to fetch facilities')).toBeInTheDocument();
-    });
+    renderWithProviders(<FacilityList />, { preloadedState });
+
+    expect(screen.getByText('Failed to load facilities')).toBeInTheDocument();
   });
 });

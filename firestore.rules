@@ -2,43 +2,56 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // Helper functions
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
     function isAdmin() {
-      return isAuthenticated() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Users collection
-    match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
+    function isFacilityAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'facility_admin';
     }
 
-    // Facilities collection
+    function isUserConnectedToFacility(facilityId) {
+      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return facilityId in userData.facilityIds;
+    }
+
+    function isFacilityAdminOf(facilityId) {
+      let facilityData = get(/databases/$(database)/documents/facilities/$(facilityId)).data;
+      return request.auth.uid in facilityData.adminIds;
+    }
+
+    // Facilities collection rules
     match /facilities/{facilityId} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if isAdmin();
+      // Read rules
+      allow read: if request.auth != null && (
+        isAdmin() || 
+        isFacilityAdmin() || 
+        isUserConnectedToFacility(facilityId)
+      );
+
+      // Create rules
+      allow create: if request.auth != null && (
+        isAdmin() || 
+        (isFacilityAdmin() && request.resource.data.adminIds.hasAll([request.auth.uid]))
+      );
+
+      // Update rules
+      allow update: if request.auth != null && (
+        isAdmin() || 
+        (isFacilityAdmin() && isFacilityAdminOf(facilityId))
+      ) && (
+        // Ensure adminIds field can't be modified by facility admins
+        !isFacilityAdmin() || 
+        (request.resource.data.adminIds == resource.data.adminIds)
+      );
+
+      // Delete rules - We'll use deactivation instead of deletion
+      allow delete: if false;
     }
 
-    // User-Facilities relationship collection
-    match /user_facilities/{docId} {
-      allow read: if isAuthenticated() && 
-        (resource.data.userId == request.auth.uid || isAdmin());
-      allow create, update, delete: if isAdmin();
-    }
-
-    // Patients collection
-    match /patients/{patientId} {
-      allow read, write: if isAuthenticated();
-    }
-
-    // Appointments collection
-    match /appointments/{appointmentId} {
-      allow read, write: if isAuthenticated();
+    // Default rule for other collections
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }

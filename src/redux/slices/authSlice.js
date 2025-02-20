@@ -14,14 +14,13 @@ const authSlice = createSlice({
     setUser: (state, action) => {
       // Only store serializable user data
       if (action.payload) {
-        const { uid, email } = action.payload;
+        const { uid, email, role } = action.payload;
         state.user = { uid, email };
+        state.role = role; // Set role when setting user
       } else {
         state.user = null;
+        state.role = null; // Clear role when clearing user
       }
-    },
-    setRole: (state, action) => {
-      state.role = action.payload;
     },
     setLoading: (state, action) => {
       state.loading = action.payload;
@@ -36,7 +35,7 @@ const authSlice = createSlice({
   },
 });
 
-export const { setUser, setRole, setLoading, setError, logout } = authSlice.actions;
+export const { setUser, setLoading, setError, logout } = authSlice.actions;
 
 // Selectors
 export const selectUser = (state) => state.auth.user;

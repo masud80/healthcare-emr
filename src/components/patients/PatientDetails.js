@@ -4,28 +4,12 @@ import { useDispatch, useSelector } from 'react-redux';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { setSelectedPatient, setLoading, setError } from '../../redux/slices/patientsSlice';
-import {
-  Container,
-  Paper,
-  Typography,
-  Grid,
-  Box,
-  Tabs,
-  Tab,
-  Button,
-  TextField,
-  List,
-  ListItem,
-  ListItemText,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-} from '@mui/material';
+import { format } from 'date-fns';
+import '../../styles/components.css';
 
 const TabPanel = ({ children, value, index }) => (
   <div hidden={value !== index}>
-    {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+    {value === index && <div className="tab-content">{children}</div>}
   </div>
 );
 
@@ -89,118 +73,133 @@ const PatientDetails = () => {
   };
 
   if (loading) {
-    return <Container><Typography>Loading patient details...</Typography></Container>;
+    return <div className="container"><p>Loading patient details...</p></div>;
   }
 
   if (!selectedPatient) {
-    return <Container><Typography>Patient not found</Typography></Container>;
+    return <div className="container"><p>Patient not found</p></div>;
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          {selectedPatient.name}
-        </Typography>
-        <Typography color="textSecondary" gutterBottom>
-          Patient ID: {selectedPatient.id}
-        </Typography>
+    <div className="container">
+      <div className="paper">
+        <h1 className="title">{selectedPatient.name}</h1>
+        <p className="subtitle">Patient ID: {selectedPatient.id}</p>
 
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mt: 3 }}>
-          <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
-            <Tab label="Personal Information" />
-            <Tab label="Medical History" />
-            <Tab label="Notes" />
-          </Tabs>
-        </Box>
+        <div className="tabs">
+          <button 
+            className={`tab ${tabValue === 0 ? 'active' : ''}`}
+            onClick={() => setTabValue(0)}
+          >
+            Personal Information
+          </button>
+          <button 
+            className={`tab ${tabValue === 1 ? 'active' : ''}`}
+            onClick={() => setTabValue(1)}
+          >
+            Medical History
+          </button>
+          <button 
+            className={`tab ${tabValue === 2 ? 'active' : ''}`}
+            onClick={() => setTabValue(2)}
+          >
+            Notes
+          </button>
+        </div>
 
         <TabPanel value={tabValue} index={0}>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <Typography variant="h6" gutterBottom>Basic Information</Typography>
-              <Box sx={{ ml: 2 }}>
-                <Typography>Date of Birth: {selectedPatient.dateOfBirth}</Typography>
-                <Typography>Gender: {selectedPatient.gender}</Typography>
-                <Typography>Contact: {selectedPatient.contact}</Typography>
-                <Typography>Email: {selectedPatient.email}</Typography>
-                <Typography>Address: {selectedPatient.address}</Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Typography variant="h6" gutterBottom>Emergency Contact</Typography>
-              <Box sx={{ ml: 2 }}>
-                <Typography>Name: {selectedPatient.emergencyContact?.name}</Typography>
-                <Typography>Relationship: {selectedPatient.emergencyContact?.relationship}</Typography>
-                <Typography>Phone: {selectedPatient.emergencyContact?.phone}</Typography>
-              </Box>
-            </Grid>
-          </Grid>
+          <div className="grid grid-2-cols">
+            <div>
+              <h2 className="subtitle">Basic Information</h2>
+              <div className="paper">
+                <p>Date of Birth: {format(new Date(selectedPatient.dateOfBirth), 'MM/dd/yyyy')}</p>
+                <p>Gender: {selectedPatient.gender}</p>
+                <p>Contact: {selectedPatient.contact}</p>
+                <p>Email: {selectedPatient.email}</p>
+                <p>Address: {selectedPatient.address}</p>
+              </div>
+            </div>
+            <div>
+              <h2 className="subtitle">Emergency Contact</h2>
+              <div className="paper">
+                <p>Name: {selectedPatient.emergencyContact?.name}</p>
+                <p>Relationship: {selectedPatient.emergencyContact?.relationship}</p>
+                <p>Phone: {selectedPatient.emergencyContact?.phone}</p>
+              </div>
+            </div>
+          </div>
         </TabPanel>
 
         <TabPanel value={tabValue} index={1}>
-          <Typography variant="h6" gutterBottom>Medical History</Typography>
-          <Box sx={{ ml: 2 }}>
-            <Typography>Blood Type: {selectedPatient.bloodType}</Typography>
-            <Typography>Allergies: {selectedPatient.allergies?.join(', ') || 'None'}</Typography>
-            <Typography>Chronic Conditions: {selectedPatient.chronicConditions?.join(', ') || 'None'}</Typography>
-          </Box>
+          <h2 className="subtitle">Medical History</h2>
+          <div className="paper">
+            <p>Blood Type: {selectedPatient.bloodType}</p>
+            <p>Allergies: {selectedPatient.allergies?.join(', ') || 'None'}</p>
+            <p>Chronic Conditions: {selectedPatient.chronicConditions?.join(', ') || 'None'}</p>
+          </div>
           
-          <Typography variant="h6" sx={{ mt: 3 }} gutterBottom>Past Visits</Typography>
-          <List>
+          <h2 className="subtitle">Past Visits</h2>
+          <ul className="list">
             {selectedPatient.visits?.map((visit, index) => (
-              <ListItem key={index}>
-                <ListItemText
-                  primary={new Date(visit.date).toLocaleDateString()}
-                  secondary={visit.reason}
-                />
-              </ListItem>
+              <li key={index} className="list-item">
+                <strong>{format(new Date(visit.date), 'MM/dd/yyyy')}</strong>
+                <p>{visit.reason}</p>
+              </li>
             ))}
-          </List>
+          </ul>
         </TabPanel>
 
         <TabPanel value={tabValue} index={2}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-            <Typography variant="h6">Clinical Notes</Typography>
-            <Button
-              variant="contained"
+          <div className="flex flex-between flex-center">
+            <h2 className="subtitle">Clinical Notes</h2>
+            <button
+              className="button button-primary"
               onClick={() => setOpenNoteDialog(true)}
             >
               Add Note
-            </Button>
-          </Box>
-          <List>
+            </button>
+          </div>
+          <ul className="list">
             {selectedPatient.notes?.map((note, index) => (
-              <ListItem key={index}>
-                <ListItemText
-                  primary={note.content}
-                  secondary={`${note.author} - ${new Date(note.timestamp).toLocaleString()}`}
-                />
-              </ListItem>
+              <li key={index} className="list-item">
+                <p>{note.content}</p>
+                <small>{note.author} - {new Date(note.timestamp).toLocaleString()}</small>
+              </li>
             ))}
-          </List>
+          </ul>
         </TabPanel>
-      </Paper>
+      </div>
 
-      <Dialog open={openNoteDialog} onClose={() => setOpenNoteDialog(false)}>
-        <DialogTitle>Add Clinical Note</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Note"
-            fullWidth
-            multiline
-            rows={4}
-            value={newNote}
-            onChange={(e) => setNewNote(e.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenNoteDialog(false)}>Cancel</Button>
-          <Button onClick={handleAddNote} variant="contained">Add</Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+      {openNoteDialog && (
+        <div className="dialog-overlay">
+          <div className="dialog">
+            <h3 className="dialog-title">Add Clinical Note</h3>
+            <div className="dialog-content">
+              <textarea
+                className="input input-multiline"
+                value={newNote}
+                onChange={(e) => setNewNote(e.target.value)}
+                placeholder="Enter your note here..."
+              />
+            </div>
+            <div className="dialog-actions">
+              <button 
+                className="button button-secondary"
+                onClick={() => setOpenNoteDialog(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="button button-primary"
+                onClick={handleAddNote}
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

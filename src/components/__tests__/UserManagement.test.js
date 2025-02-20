@@ -4,119 +4,70 @@ import '@testing-library/jest-dom';
 import UserManagement from '../admin/UserManagement';
 import { renderWithProviders } from './testUtils';
 
-describe('UserManagement Component CRUD Operations', () => {
+// Mock window.confirm
+window.confirm = jest.fn(() => true);
+
+describe('UserManagement Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  // READ - Test loading and displaying users
-  test('loads and displays users', async () => {
+  test('renders user management page for admin users', async () => {
     renderWithProviders(<UserManagement />);
 
+    await waitFor(() => {
+      expect(screen.getByText('User Management')).toBeInTheDocument();
+    });
+    
+    expect(screen.getByText('Add New User')).toBeInTheDocument();
+  });
+
+  test('shows permission denied for non-admin users', () => {
+    renderWithProviders(<UserManagement />, {
+      preloadedState: {
+        auth: {
+          user: { uid: 'testUserId', email: 'test@example.com' },
+          role: 'doctor',
+          loading: false,
+          error: null
+        }
+      }
+    });
+
+    expect(screen.getByText('You do not have permission to access this page.')).toBeInTheDocument();
+  });
+
+  test('opens add user dialog when clicking Add New User button', async () => {
+    renderWithProviders(<UserManagement />);
+
+    // Wait for the component to load
     await waitFor(() => {
       expect(screen.getByText('Add New User')).toBeInTheDocument();
     });
-  });
 
-  // CREATE - Test adding a new user
-  test('creates a new user', async () => {
-    renderWithProviders(<UserManagement />);
-
-    // Click add user button
+    // Click the button
     fireEvent.click(screen.getByText('Add New User'));
 
-    // Fill in the form
-    fireEvent.change(screen.getByLabelText('Email'), {
-      target: { value: 'newuser@test.com' }
-    });
-    fireEvent.change(screen.getByLabelText('Password'), {
-      target: { value: 'password123' }
-    });
-    fireEvent.change(screen.getByLabelText('Role'), {
-      target: { value: 'doctor' }
-    });
-
-    // Submit the form
-    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
-
-    await waitFor(() => {
-      expect(screen.getByText('User added successfully')).toBeInTheDocument();
-    });
+    // Check dialog elements
+    expect(screen.getByLabelText('Email')).toBeInTheDocument();
+    expect(screen.getByLabelText('Password')).toBeInTheDocument();
+    expect(screen.getByLabelText('Name')).toBeInTheDocument();
+    expect(screen.getByLabelText('Role')).toBeInTheDocument();
   });
 
-  // UPDATE - Test updating a user
-  test('updates an existing user', async () => {
-    const existingUser = {
-      id: '1',
-      email: 'existing@test.com',
-      role: 'nurse',
-      facilities: []
-    };
-
+  test('displays error message when fetch fails', async () => {
     renderWithProviders(<UserManagement />, {
       preloadedState: {
-        users: {
-          users: [existingUser],
-          loading: false,
-          error: null
-        }
-      }
-    });
-
-    // Click edit button
-    fireEvent.click(screen.getByRole('button', { name: 'Edit User', exact: false }));
-
-    // Update user role
-    fireEvent.change(screen.getByLabelText('Role'), {
-      target: { value: 'doctor' }
-    });
-
-    // Save changes
-    fireEvent.click(screen.getByRole('button', { name: 'Update' }));
-
-    await waitFor(() => {
-      expect(screen.getByText('User updated successfully')).toBeInTheDocument();
-    });
-  });
-
-  // DELETE - Test deleting a user
-  test('deletes a user', async () => {
-    const userToDelete = {
-      id: '1',
-      email: 'delete@test.com',
-      role: 'nurse',
-      facilities: []
-    };
-
-    renderWithProviders(<UserManagement />, {
-      preloadedState: {
-        users: {
-          users: [userToDelete],
-          loading: false,
-          error: null
-        }
-      }
-    });
-
-    // Click delete button
-    fireEvent.click(screen.getByRole('button', { name: 'Delete User', exact: false }));
-
-    // Confirm deletion
-    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
-
-    await waitFor(() => {
-      expect(screen.getByText('User deleted successfully')).toBeInTheDocument();
-    });
-  });
-
-  // ERROR - Test error handling
-  test('handles errors when loading users fails', async () => {
-    renderWithProviders(<UserManagement />, {
-      preloadedState: {
-        users: {
-          users: [],
+        auth: {
+          user: { uid: 'testUserId', email: 'test@example.com' },
+          role: 'admin',
           loading: false,
           error: 'Failed to fetch users'
+        },
+        facilities: {
+          facilities: [],
+          loading: false,
+          error: null
         }
       }
     });

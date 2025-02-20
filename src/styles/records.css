@@ -1,0 +1,22 @@
+.records-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.record-item {
+  padding: 1rem;
+  border-radius: 4px;
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.record-item h3 {
+  margin-top: 0;
+  color: #2c3e50;
+}
+
+.record-item p {
+  margin: 0.5rem 0;
+  color: #34495e;
+}

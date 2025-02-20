@@ -1,119 +1,91 @@
-import { useSelector } from 'react-redux';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Container,
-  Grid,
-  Paper,
-  Typography,
-  Box,
-  Button,
-  AppBar,
-  Toolbar,
-  IconButton,
-} from '@mui/material';
-import {
-  People as PeopleIcon,
-  Assignment as AssignmentIcon,
-  CalendarToday as CalendarIcon,
-  ExitToApp as LogoutIcon,
-} from '@mui/icons-material';
-import { auth } from '../firebase/config';
-import { useDispatch } from 'react-redux';
-import { logout } from '../redux/slices/authSlice';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../firebase/config';
+import '../styles/components.css';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const { role } = useSelector((state) => state.auth);
-  const isAdmin = role === 'admin';
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleLogout = async () => {
-    try {
-      await auth.signOut();
-      dispatch(logout());
-      navigate('/login');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const querySnapshot = await getDocs(collection(db, 'someCollection'));
+        const dataList = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setData(dataList);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const DashboardCard = ({ title, icon, description, onClick }) => (
-    <Grid item xs={12} md={4}>
-      <Paper
-        sx={{
-          p: 3,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          cursor: 'pointer',
-          height: '100%',
-          '&:hover': {
-            backgroundColor: 'rgba(0, 0, 0, 0.04)',
-          },
-        }}
-        onClick={onClick}
-      >
-        <Box sx={{ mb: 2 }}>{icon}</Box>
-        <Typography variant="h6" gutterBottom>
-          {title}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" align="center">
-          {description}
-        </Typography>
-      </Paper>
-    </Grid>
-  );
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return <div className="container"><p>Loading dashboard data...</p></div>;
+  }
 
   return (
-    <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Healthcare EMR
-          </Typography>
-          <IconButton color="inherit" onClick={handleLogout}>
-            <LogoutIcon />
-          </IconButton>
-        </Toolbar>
-      </AppBar>
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          Welcome to the Dashboard
-        </Typography>
-        <Grid container spacing={3}>
-          <DashboardCard
-            title="Patients"
-            icon={<PeopleIcon fontSize="large" color="primary" />}
-            description="Manage patient records, view histories, and update information"
+    <div className="container">
+      <h1 className="title">Dashboard</h1>
+      <div className="grid grid-2-cols">
+        <div className="paper">
+          <h2 className="subtitle">Recent Patients</h2>
+          <button 
+            className="button button-primary"
             onClick={() => navigate('/patients')}
-          />
-          <DashboardCard
-            title="Medical Records"
-            icon={<AssignmentIcon fontSize="large" color="primary" />}
-            description="Access and update patient medical records and treatment plans"
-            onClick={() => navigate('/records')}
-          />
-          <DashboardCard
-            title="Appointments"
-            icon={<CalendarIcon fontSize="large" color="primary" />}
-            description="Schedule and manage patient appointments"
-            onClick={() => navigate('/appointments')}
-          />
-        </Grid>
+          >
+            View All Patients
+          </button>
+        </div>
         
-        {isAdmin && (
-          <Box sx={{ mt: 4 }}>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => navigate('/admin/users')}
+        <div className="paper">
+          <h2 className="subtitle">Upcoming Appointments</h2>
+          <button 
+            className="button button-primary"
+            onClick={() => navigate('/appointments')}
+          >
+            View All Appointments
+          </button>
+        </div>
+
+        <div className="paper">
+          <h2 className="subtitle">Facilities</h2>
+          <button 
+            className="button button-primary"
+            onClick={() => navigate('/facilities')}
+          >
+            View All Facilities
+          </button>
+        </div>
+
+        <div className="paper">
+          <h2 className="subtitle">Quick Actions</h2>
+          <div className="flex flex-between gap-2">
+            <button 
+              className="button button-primary"
+              onClick={() => navigate('/patients/new')}
             >
-              Manage Users
-            </Button>
-          </Box>
-        )}
-      </Container>
-    </Box>
+              Add Patient
+            </button>
+            <button 
+              className="button button-primary"
+              onClick={() => navigate('/appointments/new')}
+            >
+              Schedule Appointment
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

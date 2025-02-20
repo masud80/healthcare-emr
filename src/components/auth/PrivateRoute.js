@@ -3,7 +3,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { selectUser, selectLoading, selectRole } from '../../redux/slices/authSlice';
 
-const PrivateRoute = ({ requireAdmin }) => {
+const PrivateRoute = ({ requireAdmin, requireFacilityAdmin }) => {
   const user = useSelector(selectUser);
   const role = useSelector(selectRole);
   const loading = useSelector(selectLoading);
@@ -17,7 +17,11 @@ const PrivateRoute = ({ requireAdmin }) => {
   }
 
   if (requireAdmin && role !== 'admin') {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (requireFacilityAdmin && role !== 'facility_admin' && role !== 'admin') {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <Outlet />;

@@ -1,143 +1,129 @@
 import { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { collection, getDocs } from 'firebase/firestore';
+import { useSelector } from 'react-redux';
+import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { setPatients, setLoading, setError } from '../../redux/slices/patientsSlice';
-import {
-  Container,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Button,
-  TextField,
-  Box,
-  Typography,
-  IconButton,
-  Tooltip,
-} from '@mui/material';
-import {
-  Add as AddIcon,
-  Search as SearchIcon,
-  Edit as EditIcon,
-  Visibility as ViewIcon,
-} from '@mui/icons-material';
+import '../../styles/components.css';
 
 const PatientList = () => {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { patients, loading } = useSelector((state) => state.patients);
+  const { role } = useSelector((state) => state.auth);
+  const { selectedFacilities } = useSelector((state) => state.facilities);
+  const [patients, setPatients] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    const fetchPatients = async () => {
-      dispatch(setLoading(true));
-      try {
-        const querySnapshot = await getDocs(collection(db, 'patients'));
-        const patientList = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        dispatch(setPatients(patientList));
-      } catch (error) {
-        dispatch(setError(error.message));
-      } finally {
-        dispatch(setLoading(false));
+  const fetchPatients = async () => {
+    try {
+      let patientsQuery;
+      
+      if (selectedFacilities.length > 0) {
+        patientsQuery = query(
+          collection(db, 'patients'),
+          where('facilityId', 'in', selectedFacilities),
+          orderBy('name')
+        );
+      } else {
+        patientsQuery = query(
+          collection(db, 'patients'),
+          orderBy('name')
+        );
       }
-    };
+      
+      const querySnapshot = await getDocs(patientsQuery);
+      const patientList = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setPatients(patientList);
+    } catch (error) {
+      console.error('Error fetching patients:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchPatients();
-  }, [dispatch]);
+  }, [selectedFacilities]);
 
   const filteredPatients = patients.filter(patient =>
     patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.id.toLowerCase().includes(searchTerm.toLowerCase())
+    patient.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
     return (
-      <Container>
-        <Typography>Loading patients...</Typography>
-      </Container>
+      <div className="container">
+        <p>Loading patients...</p>
+      </div>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          Patients
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => navigate('/patients/new')}
-        >
-          Add New Patient
-        </Button>
-      </Box>
+    <div className="container">
+      <div className="flex flex-between flex-center">
+        <h1 className="title">Patients</h1>
+        {(role === 'admin' || role === 'doctor') && (
+          <button
+            className="button button-primary"
+            onClick={() => navigate('/patients/new')}
+          >
+            + Add Patient
+          </button>
+        )}
+      </div>
 
-      <Paper sx={{ mb: 3, p: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <SearchIcon sx={{ mr: 1 }} />
-          <TextField
-            fullWidth
-            variant="outlined"
-            placeholder="Search patients by name or ID"
+      <div className="paper">
+        <div className="form-control">
+          <input
+            type="text"
+            placeholder="Search patients..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            className="input"
           />
-        </Box>
-      </Paper>
+        </div>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Patient ID</TableCell>
-              <TableCell>Name</TableCell>
-              <TableCell>Date of Birth</TableCell>
-              <TableCell>Contact</TableCell>
-              <TableCell>Last Visit</TableCell>
-              <TableCell align="center">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredPatients.map((patient) => (
-              <TableRow key={patient.id}>
-                <TableCell>{patient.id}</TableCell>
-                <TableCell>{patient.name}</TableCell>
-                <TableCell>{patient.dateOfBirth}</TableCell>
-                <TableCell>{patient.contact}</TableCell>
-                <TableCell>{patient.lastVisit || 'N/A'}</TableCell>
-                <TableCell align="center">
-                  <Tooltip title="View Details">
-                    <IconButton
-                      color="primary"
+        <div className="table-container">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Date of Birth</th>
+                <th>Contact</th>
+                <th>Email</th>
+                <th>Blood Type</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredPatients.map((patient) => (
+                <tr key={patient.id}>
+                  <td>{patient.name}</td>
+                  <td>{new Date(patient.dateOfBirth).toLocaleDateString()}</td>
+                  <td>{patient.contact}</td>
+                  <td>{patient.email}</td>
+                  <td>{patient.bloodType}</td>
+                  <td>
+                    <button
+                      className="button button-secondary"
                       onClick={() => navigate(`/patients/${patient.id}`)}
                     >
-                      <ViewIcon />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Edit Patient">
-                    <IconButton
-                      color="primary"
-                      onClick={() => navigate(`/patients/${patient.id}/edit`)}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                  </Tooltip>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Container>
+                      View Details
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {filteredPatients.length === 0 && (
+          <p className="text-center">No patients found.</p>
+        )}
+      </div>
+    </div>
   );
 };
 

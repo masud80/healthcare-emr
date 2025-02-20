@@ -1,77 +1,174 @@
-import { useState } from 'react';
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions, Typography } from '@mui/material';
-import { initializeDatabase } from '../../utils/initializeTestData';
-import { addAdminRole } from '../../utils/addAdminRole';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { collection, getDocs, query, where, deleteDoc, addDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { db, auth } from '../../firebase/config';
+import '../../styles/components.css';
 
 const DatabaseInitializer = () => {
-  const [open, setOpen] = useState(false);
-  const [initializing, setInitializing] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(false);
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const role = useSelector((state) => state.auth.role);
+  const user = useSelector((state) => state.auth.user);
 
-  const handleInitialize = async () => {
-    setInitializing(true);
-    setError(null);
-    setSuccess(false);
+  useEffect(() => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
     
+    if (role !== 'admin') {
+      navigate('/dashboard');
+    }
+  }, [user, role, navigate]);
+
+  if (role !== 'admin') {
+    return null;
+  }
+
+  const clearDatabase = async () => {
+    // Clear users collection
+    const usersSnapshot = await getDocs(collection(db, 'users'));
+    for (const doc of usersSnapshot.docs) {
+      await deleteDoc(doc.ref);
+    }
+
+    // Clear facilities collection
+    const facilitiesSnapshot = await getDocs(collection(db, 'facilities'));
+    for (const doc of facilitiesSnapshot.docs) {
+      await deleteDoc(doc.ref);
+    }
+  };
+
+  const initializeDatabase = async () => {
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
     try {
-      await initializeDatabase();
-      await addAdminRole(); // Ensure admin role exists in Firestore
-      setSuccess(true);
+      // Check if data already exists
+      const usersQuery = query(collection(db, 'users'), where('role', '==', 'admin'));
+      const usersSnapshot = await getDocs(usersQuery);
+
+      if (!usersSnapshot.empty) {
+        setError('Database is already initialized');
+        return;
+      }
+
+      // Add sample data
+      const sampleData = {
+        users: [
+          { email: 'admin@healthcare.com', password: 'admin123', role: 'admin' },
+          { email: 'doctor@healthcare.com', password: 'doctor123', role: 'doctor' },
+          { email: 'nurse@healthcare.com', password: 'nurse123', role: 'nurse' },
+        ],
+        facilities: [
+          { name: 'Main Hospital', location: 'Downtown', contact: '555-0100' },
+          { name: 'North Clinic', location: 'North Side', contact: '555-0200' },
+        ],
+      };
+
+      // Add users
+      for (const user of sampleData.users) {
+        try {
+          // Create Firebase Auth user
+          const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            user.email,
+            user.password
+          );
+
+          // Create Firestore user document
+          await addDoc(collection(db, 'users'), {
+            uid: userCredential.user.uid,
+            email: user.email,
+            role: user.role,
+          });
+        } catch (error) {
+          // If user already exists, continue with next user
+          if (error.code === 'auth/email-already-in-use') {
+            console.log(`User ${user.email} already exists`);
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      // Add facilities
+      for (const facility of sampleData.facilities) {
+        await addDoc(collection(db, 'facilities'), facility);
+      }
+
+      setSuccess('Database initialized successfully');
     } catch (error) {
-      setError(error.message);
+      console.error('Error initializing database:', error);
+      setError('Failed to initialize database: ' + error.message);
     } finally {
-      setInitializing(false);
+      setLoading(false);
+    }
+  };
+
+  const handleReset = async () => {
+    if (!window.confirm('Are you sure you want to reset the database? This will delete all existing data.')) {
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      await clearDatabase();
+      await initializeDatabase();
+      setSuccess('Database has been reset and reinitialized successfully');
+    } catch (error) {
+      console.error('Error resetting database:', error);
+      setError('Failed to reset database: ' + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <>
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={() => setOpen(true)}
-        sx={{ position: 'fixed', bottom: 16, right: 16 }}
-      >
-        Initialize Test Data
-      </Button>
+    <div className="container">
+      <div className="paper">
+        <h1 className="title">Database Initializer</h1>
+        <p>This utility will populate the database with sample data.</p>
+        
+        {error && (
+          <div className="error-message" style={{ color: '#f44336', marginBottom: '1rem' }}>
+            {error}
+          </div>
+        )}
+        
+        {success && (
+          <div className="success-message" style={{ color: '#4caf50', marginBottom: '1rem' }}>
+            {success}
+          </div>
+        )}
 
-      <Dialog open={open} onClose={() => setOpen(false)}>
-        <DialogTitle>Initialize Test Data</DialogTitle>
-        <DialogContent>
-          <Typography>
-            This will create test users and patients in the database. Use these credentials to log in:
-          </Typography>
-          <Typography variant="body2" component="div" sx={{ mt: 2 }}>
-            <ul>
-              <li>Admin: admin@healthcare.com / admin123</li>
-              <li>Doctor: doctor@healthcare.com / doctor123</li>
-              <li>Nurse: nurse@healthcare.com / nurse123</li>
-            </ul>
-          </Typography>
-          {error && (
-            <Typography color="error" sx={{ mt: 2 }}>
-              Error: {error}
-            </Typography>
-          )}
-          {success && (
-            <Typography color="success" sx={{ mt: 2 }}>
-              Test data initialized successfully!
-            </Typography>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button
-            onClick={handleInitialize}
-            disabled={initializing}
-            variant="contained"
+        <div className="flex gap-2">
+          <button
+            className="button button-primary"
+            onClick={initializeDatabase}
+            disabled={loading}
           >
-            {initializing ? 'Initializing...' : 'Initialize'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </>
+            {loading ? 'Initializing...' : 'Initialize Database'}
+          </button>
+
+          <button
+            className="button button-secondary"
+            onClick={handleReset}
+            disabled={loading}
+          >
+            {loading ? 'Resetting...' : 'Reset Database'}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 

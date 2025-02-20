@@ -2,203 +2,87 @@ import React from 'react';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import PatientList from '../patients/PatientList';
-import { renderWithProviders, mockPatient } from './testUtils';
-import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { renderWithProviders } from '../testUtils';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 
 // Mock Firebase Firestore functions
 jest.mock('firebase/firestore', () => ({
   collection: jest.fn(),
   getDocs: jest.fn(),
   addDoc: jest.fn(),
+  updateDoc: jest.fn(),
   deleteDoc: jest.fn(),
   doc: jest.fn(),
-  updateDoc: jest.fn(),
-  query: jest.fn(),
-  where: jest.fn()
 }));
 
-describe('PatientList Component CRUD Operations', () => {
+// Mock useNavigate
+const mockNavigate = jest.fn();
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: () => mockNavigate,
+}));
+
+describe('PatientList Component', () => {
+  const mockPatients = [
+    { 
+      id: '1', 
+      name: 'John Doe',
+      dateOfBirth: '1990-01-01',
+      contact: '123-456-7890',
+      lastVisit: '2023-01-01'
+    },
+    { 
+      id: '2', 
+      name: 'Jane Smith',
+      dateOfBirth: '1985-05-15',
+      contact: '098-765-4321',
+      lastVisit: '2023-02-01'
+    }
+  ];
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  // READ - Test loading and displaying patients
   test('loads and displays patients', async () => {
-    const mockPatients = [
-      { 
-        id: '1', 
-        name: 'John Doe', 
-        email: 'john@example.com',
-        dateOfBirth: '1990-01-01',
-        phone: '123-456-7890'
-      },
-      { 
-        id: '2', 
-        name: 'Jane Smith', 
-        email: 'jane@example.com',
-        dateOfBirth: '1985-05-15',
-        phone: '098-765-4321'
+    getDocs.mockResolvedValueOnce({
+      docs: mockPatients.map(patient => ({
+        id: patient.id,
+        data: () => patient
+      }))
+    });
+
+    renderWithProviders(<PatientList />);
+    await waitFor(() => {
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+    });
+  });
+
+  test('displays loading state', () => {
+    renderWithProviders(<PatientList />, {
+      preloadedState: {
+        auth: { user: null, loading: false, error: null },
+        facilities: { facilities: [], loading: false, error: null },
+        patients: { patients: [], loading: true, error: null }
       }
-    ];
-
-    getDocs.mockResolvedValueOnce({
-      docs: mockPatients.map(patient => ({
-        id: patient.id,
-        data: () => patient
-      }))
     });
-
-    renderWithProviders(<PatientList />);
-
-    await waitFor(() => {
-      expect(screen.getByText('John Doe')).toBeInTheDocument();
-    });
-    expect(screen.getByText('Jane Smith')).toBeInTheDocument();
+    
+    expect(screen.getByTestId('loading-state')).toBeInTheDocument();
   });
 
-  // CREATE - Test adding a new patient
-  test('creates a new patient', async () => {
-    const newPatient = {
-      name: 'New Patient',
-      email: 'newpatient@example.com',
-      dateOfBirth: '1995-03-20',
-      phone: '555-555-5555'
-    };
-
-    addDoc.mockResolvedValueOnce({ id: '3' });
-    getDocs.mockResolvedValueOnce({ docs: [] });
-
-    renderWithProviders(<PatientList />);
-
-    // Click add patient button
-    fireEvent.click(screen.getByText('Add Patient'));
-
-    // Fill in the form
-    fireEvent.change(screen.getByLabelText(/name/i), {
-      target: { value: newPatient.name }
-    });
-    fireEvent.change(screen.getByLabelText(/email/i), {
-      target: { value: newPatient.email }
-    });
-    fireEvent.change(screen.getByLabelText(/date of birth/i), {
-      target: { value: newPatient.dateOfBirth }
-    });
-    fireEvent.change(screen.getByLabelText(/phone/i), {
-      target: { value: newPatient.phone }
+  test('displays error state', () => {
+    renderWithProviders(<PatientList />, {
+      preloadedState: {
+        auth: { user: null, loading: false, error: null },
+        facilities: { facilities: [], loading: false, error: null },
+        patients: { patients: [], loading: false, error: 'Failed to load patients' }
+      }
     });
 
-    // Submit the form
-    fireEvent.click(screen.getByText('Save'));
-
-    await waitFor(() => {
-      expect(addDoc).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({
-          name: newPatient.name,
-          email: newPatient.email,
-          dateOfBirth: newPatient.dateOfBirth,
-          phone: newPatient.phone
-        })
-      );
-    });
+    expect(screen.getByTestId('error-state')).toBeInTheDocument();
   });
 
-  // UPDATE - Test updating a patient
-  test('updates an existing patient', async () => {
-    const existingPatient = {
-      id: '1',
-      name: 'Existing Patient',
-      email: 'existing@example.com',
-      dateOfBirth: '1980-12-25',
-      phone: '111-111-1111'
-    };
-
-    getDocs.mockResolvedValueOnce({
-      docs: [{
-        id: existingPatient.id,
-        data: () => existingPatient
-      }]
-    });
-
-    renderWithProviders(<PatientList />);
-
-    await waitFor(() => {
-      expect(screen.getByText(existingPatient.name)).toBeInTheDocument();
-    });
-
-    // Click edit button
-    fireEvent.click(screen.getByTestId(`edit-patient-${existingPatient.id}`));
-
-    // Update patient name
-    fireEvent.change(screen.getByLabelText(/name/i), {
-      target: { value: 'Updated Patient Name' }
-    });
-
-    // Save changes
-    fireEvent.click(screen.getByText('Save'));
-
-    await waitFor(() => {
-      expect(updateDoc).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({
-          name: 'Updated Patient Name'
-        })
-      );
-    });
-  });
-
-  // DELETE - Test deleting a patient
-  test('deletes a patient', async () => {
-    const patientToDelete = {
-      id: '1',
-      name: 'Patient to Delete',
-      email: 'delete@example.com',
-      dateOfBirth: '1975-06-15',
-      phone: '999-999-9999'
-    };
-
-    getDocs.mockResolvedValueOnce({
-      docs: [{
-        id: patientToDelete.id,
-        data: () => patientToDelete
-      }]
-    });
-
-    renderWithProviders(<PatientList />);
-
-    await waitFor(() => {
-      expect(screen.getByText(patientToDelete.name)).toBeInTheDocument();
-    });
-
-    // Click delete button
-    fireEvent.click(screen.getByTestId(`delete-patient-${patientToDelete.id}`));
-
-    // Confirm deletion
-    fireEvent.click(screen.getByText('Confirm'));
-
-    await waitFor(() => {
-      expect(deleteDoc).toHaveBeenCalled();
-    });
-  });
-
-  // Error Handling
-  test('handles errors when loading patients fails', async () => {
-    getDocs.mockRejectedValueOnce(new Error('Failed to load patients'));
-
-    renderWithProviders(<PatientList />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/error loading patients/i)).toBeInTheDocument();
-    });
-  });
-
-  // Test patient search functionality
   test('filters patients by search term', async () => {
-    const mockPatients = [
-      { id: '1', name: 'John Doe', email: 'john@example.com' },
-      { id: '2', name: 'Jane Smith', email: 'jane@example.com' }
-    ];
-
     getDocs.mockResolvedValueOnce({
       docs: mockPatients.map(patient => ({
         id: patient.id,
@@ -207,19 +91,54 @@ describe('PatientList Component CRUD Operations', () => {
     });
 
     renderWithProviders(<PatientList />);
-
     await waitFor(() => {
       expect(screen.getByText('John Doe')).toBeInTheDocument();
     });
 
-    // Type in search field
-    fireEvent.change(screen.getByPlaceholderText(/search/i), {
+    fireEvent.change(screen.getByPlaceholderText(/search patients by name or id/i), {
       target: { value: 'Jane' }
     });
 
-    await waitFor(() => {
-      expect(screen.getByText('Jane Smith')).toBeInTheDocument();
-    });
+    expect(screen.getByText('Jane Smith')).toBeInTheDocument();
     expect(screen.queryByText('John Doe')).not.toBeInTheDocument();
+  });
+
+  test('navigates to add patient page', () => {
+    renderWithProviders(<PatientList />);
+    fireEvent.click(screen.getByText('Add New Patient'));
+    expect(mockNavigate).toHaveBeenCalledWith('/patients/new');
+  });
+
+  test('navigates to edit patient page', async () => {
+    getDocs.mockResolvedValueOnce({
+      docs: mockPatients.map(patient => ({
+        id: patient.id,
+        data: () => patient
+      }))
+    });
+
+    renderWithProviders(<PatientList />);
+    await waitFor(() => {
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByTestId('edit-patient-1'));
+    expect(mockNavigate).toHaveBeenCalledWith('/patients/1/edit');
+  });
+
+  test('deletes a patient', async () => {
+    getDocs.mockResolvedValueOnce({
+      docs: mockPatients.map(patient => ({
+        id: patient.id,
+        data: () => patient
+      }))
+    });
+
+    doc.mockReturnValue('patientRef');
+    renderWithProviders(<PatientList />);
+    await waitFor(() => {
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByTestId('delete-patient-1'));
+    expect(deleteDoc).toHaveBeenCalledWith('patientRef');
   });
 });
