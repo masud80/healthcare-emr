@@ -1,24 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { fetchUserFacilities } from '../../redux/thunks/facilitiesThunks';
 import '../../styles/components.css';
 
 const PatientList = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
   const { role } = useSelector((state) => state.auth);
-  const { userFacilities } = useSelector((state) => state.facilities);
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-
-  useEffect(() => {
-    dispatch(fetchUserFacilities());
-  }, [dispatch]);
 
   useEffect(() => {
     const fetchPatients = async () => {
@@ -26,37 +19,16 @@ const PatientList = () => {
         setLoading(true);
         setError(null);
 
-        let patientsQuery;
-        
-        if (role === 'admin') {
-          // Admin can see all patients
-          console.log('Admin user - fetching all patients');
-          patientsQuery = query(
-            collection(db, 'patients'),
-            orderBy('name', 'asc')
-          );
-        } else {
-          // Non-admin users can only see patients from their facilities
-          if (!userFacilities || userFacilities.length === 0) {
-            console.log('No facilities assigned');
-            setPatients([]);
-            return;
-          }
-
-          const facilityIds = userFacilities.map(f => f.id);
-          console.log('Fetching patients for facilities:', facilityIds);
-          
-          patientsQuery = query(
-            collection(db, 'patients'),
-            where('facilityId', 'in', facilityIds),
-            orderBy('name', 'asc')
-          );
-        }
+        // Create a query with orderBy to ensure we get a consistent order
+        const patientsQuery = query(
+          collection(db, 'patients'),
+          orderBy('name', 'asc')
+        );
 
         const querySnapshot = await getDocs(patientsQuery);
         
         if (querySnapshot.empty) {
-          console.log('No patients found in assigned facilities');
+          console.log('No patients found');
           setPatients([]);
           return;
         }
@@ -85,7 +57,7 @@ const PatientList = () => {
     };
 
     fetchPatients();
-  }, [userFacilities, role]);
+  }, []);
 
   const filteredPatients = patients.filter(patient =>
     patient.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -143,13 +115,9 @@ const PatientList = () => {
           />
         </div>
 
-        {(role !== 'admin' && userFacilities.length === 0) ? (
+        {filteredPatients.length === 0 ? (
           <div className="text-center">
-            <p>No facilities assigned. Please contact an administrator.</p>
-          </div>
-        ) : filteredPatients.length === 0 ? (
-          <div className="text-center">
-            <p>{role === 'admin' ? 'No patients found in the system' : 'No patients found in your assigned facilities'}</p>
+            <p>No patients found</p>
             {searchTerm && (
               <button
                 className="button button-secondary"

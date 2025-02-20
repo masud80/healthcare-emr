@@ -25,6 +25,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import EventIcon from '@mui/icons-material/Event';
 import BusinessIcon from '@mui/icons-material/Business';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 
@@ -97,14 +98,24 @@ const Layout = () => {
           </ListItemButton>
         </ListItem>
         {role === 'admin' && (
-          <ListItem component="div">
-            <ListItemButton onClick={() => navigate('/users')}>
-              <ListItemIcon>
-                <AdminPanelSettingsIcon />
-              </ListItemIcon>
-              <ListItemText primary="User Management" />
-            </ListItemButton>
-          </ListItem>
+          <>
+            <ListItem component="div">
+              <ListItemButton onClick={() => navigate('/admin/users')}>
+                <ListItemIcon>
+                  <AdminPanelSettingsIcon />
+                </ListItemIcon>
+                <ListItemText primary="User Management" />
+              </ListItemButton>
+            </ListItem>
+            <ListItem component="div">
+              <ListItemButton onClick={() => navigate('/audit')}>
+                <ListItemIcon>
+                  <AssessmentIcon />
+                </ListItemIcon>
+                <ListItemText primary="Audit Report" />
+              </ListItemButton>
+            </ListItem>
+          </>
         )}
         <ListItem component="div">
           <ListItemButton onClick={handleLogout}>

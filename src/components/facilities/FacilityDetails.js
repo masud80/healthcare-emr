@@ -1,268 +1,155 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../../firebase/config';
-import { 
-  Box, 
-  Button, 
-  TextField, 
-  Typography, 
-  Paper,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Chip
-} from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
+import { TextField, Button, Container, Typography, Box, Grid, Paper, Alert } from '@mui/material';
+import { updateFacility, fetchFacilityById } from '../../redux/thunks/facilitiesThunks';
 
 const FacilityDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const user = useSelector((state) => state.auth.user);
-  const isAdmin = user?.role === 'admin';
-  const isFacilityAdmin = user?.role === 'facility_admin';
-  
-  const [facility, setFacility] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [confirmDialog, setConfirmDialog] = useState(false);
-  
+  const dispatch = useDispatch();
+  const facility = useSelector((state) => state.facilities.selectedFacility);
   const [formData, setFormData] = useState({
     name: '',
+    address: '',
+    phone: '',
+    email: '',
     type: '',
-    location: '',
-    capacity: '',
-    contact: '',
-    services: '',
-    status: 'active'
   });
-
-  const canEdit = isAdmin || (isFacilityAdmin && facility?.adminIds?.includes(user.uid));
+  const [submitError, setSubmitError] = useState(null);
 
   useEffect(() => {
-    const fetchFacility = async () => {
-      try {
-        const facilityDoc = await getDoc(doc(db, 'facilities', id));
-        if (facilityDoc.exists()) {
-          const data = facilityDoc.data();
-          setFacility(data);
-          setFormData(data);
-        } else {
-          setError('Facility not found');
-        }
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching facility:', err);
-        setError('Failed to fetch facility details');
-        setLoading(false);
-      }
-    };
+    if (id) {
+      dispatch(fetchFacilityById(id));
+    }
+  }, [dispatch, id]);
 
-    fetchFacility();
-  }, [id]);
+  useEffect(() => {
+    if (facility) {
+      setFormData({
+        name: facility.name || '',
+        address: facility.address || '',
+        phone: facility.phone || '',
+        email: facility.email || '',
+        type: facility.type || '',
+      });
+    }
+  }, [facility]);
 
-  const handleInputChange = (e) => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value,
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitError(null);
+    
     try {
-      // Preserve adminIds and connectedUserIds when updating
-      const updateData = {
-        ...formData,
-        adminIds: facility.adminIds,
-        connectedUserIds: facility.connectedUserIds
-      };
-      
-      await updateDoc(doc(db, 'facilities', id), updateData);
-      setFacility(updateData);
-      setIsEditing(false);
-    } catch (err) {
-      console.error('Error updating facility:', err);
-      setError('Failed to update facility');
+      const resultAction = await dispatch(updateFacility({ id, ...formData }));
+      if (updateFacility.fulfilled.match(resultAction)) {
+        navigate('/facilities');
+      } else if (updateFacility.rejected.match(resultAction)) {
+        setSubmitError(resultAction.payload || 'Failed to update facility');
+      }
+    } catch (error) {
+      setSubmitError('Failed to update facility. Please try again.');
+      console.error('Failed to update facility:', error);
     }
   };
 
-  const handleStatusChange = async () => {
-    try {
-      const newStatus = facility.status === 'active' ? 'inactive' : 'active';
-      await updateDoc(doc(db, 'facilities', id), {
-        status: newStatus
-      });
-      setFacility({ ...facility, status: newStatus });
-      setFormData({ ...formData, status: newStatus });
-      setConfirmDialog(false);
-    } catch (err) {
-      console.error('Error updating facility status:', err);
-      setError('Failed to update facility status');
-    }
-  };
-
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>{error}</div>;
-  if (!facility) return <div>Facility not found</div>;
+  if (!facility) {
+    return <div>Loading...</div>;
+  }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Paper sx={{ p: 3 }}>
-        {!isEditing ? (
-          <>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h4" gutterBottom>
-                {facility.name}
-              </Typography>
-              <Chip 
-                label={facility.status}
-                color={facility.status === 'active' ? 'success' : 'error'}
-              />
-            </Box>
-            <Typography variant="body1" paragraph>
-              <strong>Type:</strong> {facility.type}
-            </Typography>
-            <Typography variant="body1" paragraph>
-              <strong>Location:</strong> {facility.location}
-            </Typography>
-            <Typography variant="body1" paragraph>
-              <strong>Capacity:</strong> {facility.capacity}
-            </Typography>
-            <Typography variant="body1" paragraph>
-              <strong>Contact:</strong> {facility.contact}
-            </Typography>
-            <Typography variant="body1" paragraph>
-              <strong>Services:</strong> {facility.services}
-            </Typography>
-            <Box sx={{ mt: 2 }}>
-              {canEdit && (
-                <>
-                  <Button
-                    variant="contained"
-                    onClick={() => setIsEditing(true)}
-                    sx={{ mr: 2 }}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color={facility.status === 'active' ? 'error' : 'success'}
-                    onClick={() => setConfirmDialog(true)}
-                    sx={{ mr: 2 }}
-                  >
-                    {facility.status === 'active' ? 'Deactivate' : 'Activate'}
-                  </Button>
-                </>
-              )}
-              <Button
-                variant="outlined"
-                onClick={() => navigate('/facilities')}
-              >
-                Back to List
-              </Button>
-            </Box>
-          </>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            <TextField
-              fullWidth
-              label="Name"
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-              margin="normal"
-            />
-            <TextField
-              fullWidth
-              label="Type"
-              name="type"
-              value={formData.type}
-              onChange={handleInputChange}
-              margin="normal"
-            />
-            <TextField
-              fullWidth
-              label="Location"
-              name="location"
-              value={formData.location}
-              onChange={handleInputChange}
-              margin="normal"
-            />
-            <TextField
-              fullWidth
-              label="Capacity"
-              name="capacity"
-              value={formData.capacity}
-              onChange={handleInputChange}
-              margin="normal"
-            />
-            <TextField
-              fullWidth
-              label="Contact"
-              name="contact"
-              value={formData.contact}
-              onChange={handleInputChange}
-              margin="normal"
-            />
-            <TextField
-              fullWidth
-              label="Services"
-              name="services"
-              value={formData.services}
-              onChange={handleInputChange}
-              margin="normal"
-              multiline
-              rows={4}
-            />
-            <Box sx={{ mt: 2 }}>
-              <Button
-                type="submit"
-                variant="contained"
-                color="primary"
-                sx={{ mr: 2 }}
-              >
-                Save
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => setIsEditing(false)}
-              >
-                Cancel
-              </Button>
-            </Box>
-          </form>
+    <Container maxWidth="md">
+      <Paper elevation={3} sx={{ p: 3, mt: 3 }}>
+        <Typography variant="h4" gutterBottom>
+          Edit Facility
+        </Typography>
+        {submitError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {submitError}
+          </Alert>
         )}
+        <form onSubmit={handleSubmit}>
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Address"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Phone"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Type"
+                name="type"
+                value={formData.type}
+                onChange={handleChange}
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Box sx={{ mt: 2 }}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="primary"
+                  sx={{ mr: 2 }}
+                >
+                  Save
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => navigate('/facilities')}
+                >
+                  Cancel
+                </Button>
+              </Box>
+            </Grid>
+          </Grid>
+        </form>
       </Paper>
-
-      <Dialog
-        open={confirmDialog}
-        onClose={() => setConfirmDialog(false)}
-      >
-        <DialogTitle>
-          {facility.status === 'active' ? 'Deactivate Facility?' : 'Activate Facility?'}
-        </DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to {facility.status === 'active' ? 'deactivate' : 'activate'} {facility.name}?
-            {facility.status === 'active' && ' This will hide the facility from regular users.'}
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDialog(false)}>Cancel</Button>
-          <Button 
-            onClick={handleStatusChange}
-            color={facility.status === 'active' ? 'error' : 'success'}
-            variant="contained"
-          >
-            {facility.status === 'active' ? 'Deactivate' : 'Activate'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+    </Container>
   );
 };
 

@@ -1,16 +1,15 @@
-import { auth, db } from '../firebase/config';
-import { 
+const { auth, db } = require('../firebase/config');
+const { 
   createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword,
-  signInWithEmailAndPassword as signIn
-} from 'firebase/auth';
-import { 
+  signInWithEmailAndPassword
+} = require('firebase/auth');
+const { 
   doc, 
   setDoc, 
   collection, 
   addDoc,
   getDoc
-} from 'firebase/firestore';
+} = require('firebase/firestore');
 
 const testFacilities = [
   {
@@ -62,14 +61,14 @@ const testUsers = [
 
 const testPatients = [
   {
-    name: 'James Wilson',
+    name: 'Michael Anderson',
     dateOfBirth: '1985-03-15',
     gender: 'Male',
     contact: '555-0123',
-    email: 'james.wilson@email.com',
+    email: 'michael.anderson@email.com',
     address: '123 Main St, Anytown, USA',
     emergencyContact: {
-      name: 'Mary Wilson',
+      name: 'Sarah Anderson',
       relationship: 'Spouse',
       phone: '555-0124'
     },
@@ -92,14 +91,14 @@ const testPatients = [
     ]
   },
   {
-    name: 'Emily Brown',
+    name: 'Sarah Thompson',
     dateOfBirth: '1990-07-22',
     gender: 'Female',
     contact: '555-0125',
-    email: 'emily.brown@email.com',
+    email: 'sarah.thompson@email.com',
     address: '456 Oak Ave, Anytown, USA',
     emergencyContact: {
-      name: 'Robert Brown',
+      name: 'Robert Thompson',
       relationship: 'Father',
       phone: '555-0126'
     },
@@ -120,13 +119,73 @@ const testPatients = [
         author: 'doctor'
       }
     ]
+  },
+  {
+    name: 'David Martinez',
+    dateOfBirth: '1978-09-10',
+    gender: 'Male',
+    contact: '555-0127',
+    email: 'david.martinez@email.com',
+    address: '789 Pine St, Anytown, USA',
+    emergencyContact: {
+      name: 'Maria Martinez',
+      relationship: 'Spouse',
+      phone: '555-0128'
+    },
+    bloodType: 'B+',
+    allergies: ['Shellfish'],
+    chronicConditions: ['Diabetes'],
+    visits: [
+      {
+        date: '2023-12-15',
+        reason: 'Diabetes checkup',
+        doctor: 'Dr. Emily Brown'
+      }
+    ],
+    notes: [
+      {
+        content: 'Blood sugar levels stable, continuing current medication',
+        timestamp: '2023-12-15T11:00:00',
+        author: 'doctor'
+      }
+    ]
+  },
+  {
+    name: 'Jennifer Parker',
+    dateOfBirth: '1995-04-05',
+    gender: 'Female',
+    contact: '555-0129',
+    email: 'jennifer.parker@email.com',
+    address: '321 Elm St, Anytown, USA',
+    emergencyContact: {
+      name: 'Thomas Parker',
+      relationship: 'Father',
+      phone: '555-0130'
+    },
+    bloodType: 'AB+',
+    allergies: ['Latex'],
+    chronicConditions: ['Migraine'],
+    visits: [
+      {
+        date: '2023-12-20',
+        reason: 'Migraine follow-up',
+        doctor: 'Dr. Emily Brown'
+      }
+    ],
+    notes: [
+      {
+        content: 'Migraine frequency reduced with new medication',
+        timestamp: '2023-12-20T15:30:00',
+        author: 'doctor'
+      }
+    ]
   }
 ];
 
 const testAppointments = [
   {
     patientId: '',  // Will be set after patient creation
-    patientName: 'James Wilson',
+    patientName: 'Michael Anderson',
     doctorId: '',   // Will be set after doctor creation
     doctorName: 'Dr. John Smith',
     date: new Date('2024-03-20T10:00:00').toISOString(),
@@ -137,7 +196,7 @@ const testAppointments = [
   },
   {
     patientId: '',  // Will be set after patient creation
-    patientName: 'Emily Brown',
+    patientName: 'Sarah Thompson',
     doctorId: '',   // Will be set after doctor creation
     doctorName: 'Dr. Emily Brown',
     date: new Date('2024-03-21T14:30:00').toISOString(),
@@ -178,7 +237,7 @@ const assignFacilitiesToUser = async (userId, userRole, facilityIdsMap) => {
   }
 };
 
-export const initializeTestData = async () => {
+const initializeTestData = async () => {
   try {
     let doctorIds = {};
     let patientIds = {};
@@ -228,7 +287,7 @@ export const initializeTestData = async () => {
         // If user exists, sign in and get their ID
         if (error.code === 'auth/email-already-in-use') {
           console.log(`User exists: ${user.email}, getting ID...`);
-          const userCredential = await signIn(auth, user.email, user.password);
+          const userCredential = await signInWithEmailAndPassword(auth, user.email, user.password);
           
           // Get user data from Firestore or create if doesn't exist
           const userRef = doc(db, 'users', userCredential.user.uid);
@@ -293,7 +352,7 @@ export const initializeTestData = async () => {
 };
 
 // Function to initialize the database with test data
-export const initializeDatabase = async () => {
+const initializeDatabase = async () => {
   try {
     console.log('Starting database initialization...');
     await initializeTestData();
@@ -302,4 +361,9 @@ export const initializeDatabase = async () => {
     console.error('Error during database initialization:', error);
     throw error;
   }
+};
+
+module.exports = {
+  initializeDatabase,
+  initializeTestData
 };

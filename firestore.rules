@@ -3,7 +3,8 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Helper functions
     function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return request.auth.token.admin == true || 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     function isFacilityAdmin() {

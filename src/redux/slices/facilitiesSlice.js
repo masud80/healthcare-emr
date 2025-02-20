@@ -53,4 +53,12 @@ export const {
   setError,
 } = facilitiesSlice.actions;
 
+// Selectors
+export const selectFacilities = (state) => state.facilities.facilities;
+export const selectUserFacilities = (state) => state.facilities.userFacilities;
+export const selectSelectedFacility = (state) => state.facilities.selectedFacility;
+export const selectSelectedFacilities = (state) => state.facilities.selectedFacilities;
+export const selectLoading = (state) => state.facilities.loading;
+export const selectError = (state) => state.facilities.error;
+
 export default facilitiesSlice.reducer;

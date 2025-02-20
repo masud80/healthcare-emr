@@ -1,89 +1,128 @@
-import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, where } from 'firebase/firestore';
-import { db, auth } from '../../firebase/config';
-import { setFacilities, setUserFacilities, setLoading, setError } from '../slices/facilitiesSlice';
+import { createAsyncThunk } from '@reduxjs/toolkit';
+import { db } from '../../firebase/config';
+import { collection, getDocs, doc, getDoc, updateDoc, query, where } from 'firebase/firestore';
 
-export const fetchUserFacilities = () => async (dispatch) => {
-  try {
-    dispatch(setLoading());
-    const user = auth.currentUser;
-    if (!user) {
-      dispatch(setUserFacilities([]));
-      return;
+// Fetch all facilities
+export const fetchFacilities = createAsyncThunk(
+  'facilities/fetchFacilities',
+  async () => {
+    try {
+      const facilitiesRef = collection(db, 'facilities');
+      const snapshot = await getDocs(facilitiesRef);
+      const facilities = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      return facilities;
+    } catch (error) {
+      console.error('Error fetching facilities:', error);
+      throw error;
     }
+  }
+);
 
-    // Get user's facility assignments
-    const userFacilitiesQuery = query(
-      collection(db, 'user_facilities'),
-      where('userId', '==', user.uid)
-    );
-    const userFacilitiesSnapshot = await getDocs(userFacilitiesQuery);
-    // Get unique facility IDs
-    const facilityIds = [...new Set(userFacilitiesSnapshot.docs.map(doc => doc.data().facilityId))];
-    console.log('Unique facility IDs:', facilityIds);
+// Fetch user facilities
+export const fetchUserFacilities = createAsyncThunk(
+  'facilities/fetchUserFacilities',
+  async (_, { getState }) => {
+    try {
+      const state = getState();
+      const user = state.auth.user;
+      
+      if (!user) {
+        throw new Error('No authenticated user found');
+      }
 
-    // Get facility details for assigned facilities
-    const facilitiesSnapshot = await getDocs(collection(db, 'facilities'));
-    const userFacilities = facilitiesSnapshot.docs
-      .filter(doc => facilityIds.includes(doc.id))
-      .map(doc => {
-        const data = doc.data();
+      const facilitiesRef = collection(db, 'facilities');
+      let snapshot;
+
+      if (user.role === 'admin') {
+        // Admin can see all facilities
+        snapshot = await getDocs(facilitiesRef);
+      } else {
+        // Regular users only see assigned facilities
+        const q = query(facilitiesRef, where('assignedUsers', 'array-contains', user.uid));
+        snapshot = await getDocs(q);
+      }
+
+      const facilities = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      return facilities;
+    } catch (error) {
+      console.error('Error fetching user facilities:', error);
+      throw error;
+    }
+  }
+);
+
+// Fetch facilities by IDs
+export const fetchFacilitiesByIds = createAsyncThunk(
+  'facilities/fetchFacilitiesByIds',
+  async (facilityIds) => {
+    try {
+      const facilitiesRef = collection(db, 'facilities');
+      const q = query(facilitiesRef, where('__name__', 'in', facilityIds));
+      const snapshot = await getDocs(q);
+      const facilities = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      return facilities;
+    } catch (error) {
+      console.error('Error fetching facilities by IDs:', error);
+      throw error;
+    }
+  }
+);
+
+// Fetch a single facility by ID
+export const fetchFacilityById = createAsyncThunk(
+  'facilities/fetchFacilityById',
+  async (facilityId) => {
+    try {
+      const facilityRef = doc(db, 'facilities', facilityId);
+      const facilityDoc = await getDoc(facilityRef);
+      if (facilityDoc.exists()) {
         return {
-          id: doc.id,
-          name: data.name || 'Unnamed Facility',
-          type: data.type || '',
-          address: data.address || '',
-          phone: data.phone || ''
+          id: facilityDoc.id,
+          ...facilityDoc.data()
         };
-      });
-
-    console.log('Final userFacilities:', userFacilities);
-
-    dispatch(setUserFacilities(userFacilities));
-  } catch (error) {
-    dispatch(setError(error.message));
+      } else {
+        throw new Error('Facility not found');
+      }
+    } catch (error) {
+      console.error('Error fetching facility:', error);
+      throw error;
+    }
   }
-};
+);
 
-export const fetchFacilities = () => async (dispatch) => {
-  try {
-    dispatch(setLoading());
-    const facilitiesSnapshot = await getDocs(collection(db, 'facilities'));
-    const allFacilities = facilitiesSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-    dispatch(setFacilities(allFacilities));
-  } catch (error) {
-    dispatch(setError(error.message));
+// Update a facility
+export const updateFacility = createAsyncThunk(
+  'facilities/updateFacility',
+  async ({ id, ...facilityData }, { rejectWithValue }) => {
+    try {
+      const facilityRef = doc(db, 'facilities', id);
+      
+      // First check if the facility exists
+      const facilityDoc = await getDoc(facilityRef);
+      if (!facilityDoc.exists()) {
+        return rejectWithValue('Facility not found');
+      }
+      
+      await updateDoc(facilityRef, facilityData);
+      
+      // Return the complete updated facility data
+      return {
+        id,
+        ...facilityDoc.data(),
+        ...facilityData
+      };
+    } catch (error) {
+      console.error('Error updating facility:', error);
+      return rejectWithValue(error.message || 'Failed to update facility');
+    }
   }
-};
-
-export const addFacility = (facilityData) => async (dispatch) => {
-  try {
-    dispatch(setLoading());
-    await addDoc(collection(db, 'facilities'), facilityData);
-    dispatch(fetchFacilities());
-  } catch (error) {
-    dispatch(setError(error.message));
-  }
-};
-
-export const updateFacility = (facilityId, facilityData) => async (dispatch) => {
-  try {
-    dispatch(setLoading());
-    await updateDoc(doc(db, 'facilities', facilityId), facilityData);
-    dispatch(fetchFacilities());
-  } catch (error) {
-    dispatch(setError(error.message));
-  }
-};
-
-export const deleteFacility = (facilityId) => async (dispatch) => {
-  try {
-    dispatch(setLoading());
-    await deleteDoc(doc(db, 'facilities', facilityId));
-    dispatch(fetchFacilities());
-  } catch (error) {
-    dispatch(setError(error.message));
-  }
-};
+);

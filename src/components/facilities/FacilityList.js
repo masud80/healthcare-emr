@@ -46,7 +46,8 @@ const FacilityList = () => {
               .filter(doc => facilityIds.includes(doc.id))
               .map(doc => ({
                 id: doc.id,
-                ...doc.data()
+                ...doc.data(),
+                isAdmin: doc.data().adminIds?.includes(user.uid) || false
               }));
           }
         }
@@ -120,14 +121,26 @@ const FacilityList = () => {
                 <Typography color="text.secondary">
                   Location: {facility.location}
                 </Typography>
-                <Button
-                  component={Link}
-                  to={`/facilities/${facility.id}`}
-                  variant="outlined"
-                  sx={{ mt: 2 }}
-                >
-                  View Details
-                </Button>
+                <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+                  <Button
+                    component={Link}
+                    to={`/facilities/${facility.id}`}
+                    variant="outlined"
+                  >
+                    View Details
+                  </Button>
+                  {(isAdmin || (isFacilityAdmin && (facility.adminIds?.includes(user.uid) || facility.createdBy === user.uid))) && (
+                    <Button
+                      component={Link}
+                      to={`/facilities/${facility.id}`}
+                      variant="contained"
+                      color="primary"
+                      state={{ isEditing: true }}
+                    >
+                      Edit
+                    </Button>
+                  )}
+                </Box>
               </CardContent>
             </Card>
           </Grid>

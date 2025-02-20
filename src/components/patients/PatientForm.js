@@ -1,11 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
+import { fetchFacilities } from '../../redux/thunks/facilitiesThunks';
 import '../../styles/components.css';
 
 const PatientForm = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const facilities = useSelector((state) => state.facilities.facilities);
+  
+  useEffect(() => {
+    dispatch(fetchFacilities());
+  }, [dispatch]);
   const [formData, setFormData] = useState({
     name: '',
     dateOfBirth: '',
@@ -21,6 +29,7 @@ const PatientForm = () => {
     bloodType: '',
     allergies: '',
     chronicConditions: '',
+    facilityId: ''
   });
 
   const handleChange = (e) => {
@@ -239,6 +248,25 @@ const PatientForm = () => {
               className="input"
               placeholder="e.g., Diabetes, Hypertension"
             />
+          </div>
+
+          <div className="form-control">
+            <label htmlFor="facilityId">Facility</label>
+            <select
+              id="facilityId"
+              name="facilityId"
+              value={formData.facilityId}
+              onChange={handleChange}
+              className="select"
+              required
+            >
+              <option value="">Select Facility</option>
+              {facilities.map((facility) => (
+                <option key={facility.id} value={facility.id}>
+                  {facility.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

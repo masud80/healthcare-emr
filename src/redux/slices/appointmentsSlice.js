@@ -1,4 +1,18 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../../firebase/config';
+
+export const createAppointment = createAsyncThunk(
+  'appointments/createAppointment',
+  async (appointmentData) => {
+    const appointmentsRef = collection(db, 'appointments');
+    const docRef = await addDoc(appointmentsRef, {
+      ...appointmentData,
+      createdAt: new Date().toISOString()
+    });
+    return { id: docRef.id, ...appointmentData };
+  }
+);
 
 const initialState = {
   appointments: [],
@@ -50,6 +64,22 @@ const appointmentsSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(createAppointment.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(createAppointment.fulfilled, (state, action) => {
+        state.loading = false;
+        state.appointments.push(action.payload);
+        state.selectedAppointment = action.payload;
+      })
+      .addCase(createAppointment.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message;
+      });
   },
 });
 

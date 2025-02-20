@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { collection, getDocs, updateDoc, doc } from 'firebase/firestore';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { selectRole } from '../../redux/slices/authSlice';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { db } from '../../firebase/config';
+import { db, auth } from '../../firebase/config';
+import { createAuditLog } from '../../redux/thunks/auditThunks';
 import '../../styles/components.css';
 import '../../styles/userManagement.css';
 
@@ -47,15 +48,36 @@ const UserManagement = () => {
     }
   };
 
+  const dispatch = useDispatch();
+
   const handleRoleUpdate = async (userId, newRole) => {
     if (userRole !== 'admin') {
       setError('Only administrators can update user roles');
       return;
     }
     try {
-      await updateDoc(doc(db, 'users', userId), {
+      const userRef = doc(db, 'users', userId);
+      const currentUser = users.find(user => user.id === userId);
+      const oldRole = currentUser.role || 'user';
+
+      await updateDoc(userRef, {
         role: newRole
       });
+
+      // Create audit log
+      await dispatch(createAuditLog({
+        userId: auth.currentUser.uid,
+        action: 'UPDATE_USER_ROLE',
+        targetId: userId,
+        targetType: 'USER',
+        details: {
+          before: { role: oldRole },
+          after: { role: newRole },
+          userName: currentUser.name,
+          userEmail: currentUser.email
+        }
+      }));
+
       setUsers(users.map(user => 
         user.id === userId ? { ...user, role: newRole } : user
       ));
@@ -106,10 +128,32 @@ const UserManagement = () => {
       return;
     }
     try {
-      await updateDoc(doc(db, 'users', userId), {
+      const currentUser = users.find(user => user.id === userId);
+      const userRef = doc(db, 'users', userId);
+
+      await updateDoc(userRef, {
         name: editingUser.name,
         email: editingUser.email
       });
+
+      // Create audit log
+      await dispatch(createAuditLog({
+        userId: auth.currentUser.uid,
+        action: 'UPDATE_USER_DETAILS',
+        targetId: userId,
+        targetType: 'USER',
+        details: {
+          before: {
+            name: currentUser.name,
+            email: currentUser.email
+          },
+          after: {
+            name: editingUser.name,
+            email: editingUser.email
+          },
+          userName: editingUser.name
+        }
+      }));
       
       setUsers(users.map(user => 
         user.id === userId 

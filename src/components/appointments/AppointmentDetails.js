@@ -47,7 +47,15 @@ const AppointmentDetails = () => {
   return (
     <div className="container">
       <div className="paper">
-        <h1 className="title">Appointment Details</h1>
+        <div className="flex flex-between flex-center">
+          <h1 className="title">Appointment Details</h1>
+          <button
+            className="button button-primary"
+            onClick={() => navigate(`/patients/${appointment.patientId}/visits/new`)}
+          >
+            Create Visit
+          </button>
+        </div>
         <p><strong>Date:</strong> {new Date(appointment.date).toLocaleString()}</p>
         <p><strong>Patient:</strong> {appointment.patientName}</p>
         <p><strong>Doctor:</strong> {appointment.doctorName}</p>

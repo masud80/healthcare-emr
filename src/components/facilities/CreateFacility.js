@@ -28,6 +28,8 @@ const CreateFacility = () => {
     location: '',
     capacity: '',
     contact: '',
+    phone: '',
+    fax: '',
     services: '',
     status: 'active'
   });
@@ -155,6 +157,22 @@ const CreateFacility = () => {
             label="Contact Information"
             name="contact"
             value={formData.contact}
+            onChange={handleInputChange}
+            margin="normal"
+          />
+          <TextField
+            fullWidth
+            label="Phone"
+            name="phone"
+            value={formData.phone}
+            onChange={handleInputChange}
+            margin="normal"
+          />
+          <TextField
+            fullWidth
+            label="Fax"
+            name="fax"
+            value={formData.fax}
             onChange={handleInputChange}
             margin="normal"
           />

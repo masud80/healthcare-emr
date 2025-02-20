@@ -1,5 +1,5 @@
-import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { selectUser, selectLoading, selectRole } from '../../redux/slices/authSlice';
 import '../../styles/components.css';
@@ -8,6 +8,15 @@ const PrivateRoute = ({ requireAdmin, requireFacilityAdmin }) => {
   const user = useSelector(selectUser);
   const role = useSelector(selectRole);
   const loading = useSelector(selectLoading);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if auth is initialized
+    if (!loading && !user) {
+      console.log('No user found, redirecting to login');
+      navigate('/login', { replace: true });
+    }
+  }, [user, loading, navigate]);
 
   if (loading) {
     return (

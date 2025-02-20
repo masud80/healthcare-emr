@@ -181,6 +181,161 @@
   border-top: 1px solid #eee;
 }
 
+/* Visit styles */
+.visit-form {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.visit-form .vitals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.visit-form .notes-tabs {
+  margin-bottom: 24px;
+}
+
+.visit-form .tab-content {
+  padding: 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  margin-top: 8px;
+}
+
+.visit-form .symptoms-section {
+  margin-bottom: 24px;
+}
+
+.visit-form .symptoms-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.visit-form .symptom-chip {
+  background-color: #e3f2fd;
+  border-radius: 16px;
+  padding: 4px 12px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.visit-form .symptom-chip button {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #666;
+}
+
+.visit-form .action-plan {
+  margin-bottom: 24px;
+}
+
+.visit-list {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.visit-list .visit-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.visit-list .visit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.visit-list .visit-date {
+  font-weight: bold;
+  color: #666;
+}
+
+.visit-list .vitals-chips {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.visit-list .vital-chip {
+  background-color: #f5f5f5;
+  border-radius: 16px;
+  padding: 4px 12px;
+  font-size: 14px;
+}
+
+.visit-details {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.visit-details .section {
+  margin-bottom: 24px;
+}
+
+.visit-details .section-title {
+  font-size: 1.2em;
+  font-weight: bold;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.visit-details .vitals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.visit-details .vital-item {
+  padding: 12px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+.visit-details .vital-label {
+  font-size: 0.9em;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.visit-details .vital-value {
+  font-size: 1.1em;
+  font-weight: bold;
+}
+
+.visit-details .notes-section {
+  background-color: #fff;
+  padding: 16px;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.visit-details .note-type {
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.visit-details .note-content {
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .grid-2-cols {
@@ -189,5 +344,10 @@
   
   .container {
     padding: 1rem;
+  }
+  
+  .visit-form .vitals-grid,
+  .visit-details .vitals-grid {
+    grid-template-columns: 1fr;
   }
 }
