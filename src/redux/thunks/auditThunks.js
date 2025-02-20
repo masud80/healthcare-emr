@@ -21,7 +21,7 @@ export const createAuditLog = createAsyncThunk(
 
 export const fetchAuditLogs = createAsyncThunk(
   'audit/fetchLogs',
-  async ({ startDate, endDate, patientName }, { rejectWithValue }) => {
+  async ({ startDate, endDate, userId }, { rejectWithValue }) => {
     try {
       const auditRef = collection(db, 'audit');
       let constraints = [];
@@ -32,8 +32,8 @@ export const fetchAuditLogs = createAsyncThunk(
       if (endDate) {
         constraints.push(where('timestamp', '<=', Timestamp.fromDate(new Date(endDate))));
       }
-      if (patientName) {
-        constraints.push(where('details.patientName', '==', patientName));
+      if (userId) {
+        constraints.push(where('userId', '==', userId));
       }
 
       const q = query(

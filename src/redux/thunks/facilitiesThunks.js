@@ -112,13 +112,16 @@ export const updateFacility = createAsyncThunk(
         return rejectWithValue('Facility not found');
       }
       
+      // Perform the update
       await updateDoc(facilityRef, facilityData);
+      
+      // Get the updated document to confirm changes
+      const updatedDoc = await getDoc(facilityRef);
       
       // Return the complete updated facility data
       return {
         id,
-        ...facilityDoc.data(),
-        ...facilityData
+        ...updatedDoc.data()
       };
     } catch (error) {
       console.error('Error updating facility:', error);

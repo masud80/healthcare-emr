@@ -3,6 +3,7 @@ import { useNavigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { selectUser, selectRole } from '../../redux/slices/authSlice';
 import FacilityFilter from '../facilities/FacilityFilter';
+import GlobalSearch from '../search/GlobalSearch';
 import { 
   AppBar, 
   Box, 
@@ -140,7 +141,7 @@ const Layout = () => {
         }}
       >
         <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
             <IconButton
               color="inherit"
               aria-label="open drawer"
@@ -154,7 +155,10 @@ const Layout = () => {
               Healthcare EMR
             </Typography>
           </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box sx={{ flex: 2, display: 'flex', justifyContent: 'center' }}>
+            <GlobalSearch />
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
             <FacilityFilter />
           </Box>
         </Toolbar>

@@ -5,39 +5,15 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "timestamp",
+          "fieldPath": "userId",
           "order": "ASCENDING"
         },
-        {
-          "fieldPath": "details.patientName",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "audit",
-      "queryScope": "COLLECTION",
-      "fields": [
         {
           "fieldPath": "timestamp",
           "order": "DESCENDING"
         },
         {
-          "fieldPath": "details.patientName",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "audit",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "details.patientName",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
+          "fieldPath": "__name__",
           "order": "DESCENDING"
         }
       ]

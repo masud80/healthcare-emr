@@ -1,0 +1,32 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "patients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "lastName",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "facilityIds",
+          "arrayConfig": "CONTAINS"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "patients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "firstName",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "facilityIds",
+          "arrayConfig": "CONTAINS"
+        }
+      ]
+    }
+  ]
+}

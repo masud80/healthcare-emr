@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { createVisit, fetchRecentVisits } from '../../redux/slices/visitsSlice';
+import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { db } from '../../firebase/config';
 import { 
   Accordion, 
   AccordionSummary, 
@@ -30,6 +32,7 @@ const CreateVisit = () => {
   const recentVisits = useSelector(state => state.visits.recentVisits);
   const [activeTab, setActiveTab] = useState(0);
   const [symptomInput, setSymptomInput] = useState('');
+  const [medicalRecords, setMedicalRecords] = useState([]);
   
   const [formData, setFormData] = useState({
     patientId,
@@ -69,6 +72,28 @@ const CreateVisit = () => {
 
   useEffect(() => {
     dispatch(fetchRecentVisits(patientId));
+    
+    // Fetch medical records for the patient
+    const fetchMedicalRecords = async () => {
+      try {
+        const recordsRef = collection(db, 'medical_records');
+        const q = query(
+          recordsRef, 
+          where('patientId', '==', patientId),
+          orderBy('date', 'desc')
+        );
+        const snapshot = await getDocs(q);
+        const recordsData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setMedicalRecords(recordsData);
+      } catch (error) {
+        console.error('Error fetching medical records:', error);
+      }
+    };
+
+    fetchMedicalRecords();
   }, [dispatch, patientId]);
 
   const handleVitalsChange = (e) => {
@@ -241,19 +266,56 @@ const CreateVisit = () => {
         <Tab label="Procedure" />
         <Tab label="Simple" />
         <Tab label="Phone" />
+        <Tab label="Medical History" />
       </Tabs>
       
       <Box sx={{ mt: 2 }}>
         {activeTab === 0 && (
-          <TextField
-            fullWidth
-            multiline
-            rows={4}
-            margin="normal"
-            label="Consultation Notes"
-            value={formData.notes.consultationNotes}
-            onChange={(e) => handleNotesChange(e, 'consultationNotes')}
-          />
+          <>
+            <TextField
+              fullWidth
+              multiline
+              rows={4}
+              margin="normal"
+              label="Consultation Notes"
+              value={formData.notes.consultationNotes}
+              onChange={(e) => handleNotesChange(e, 'consultationNotes')}
+            />
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="h6" gutterBottom>Symptoms</Typography>
+              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                <TextField
+                  fullWidth
+                  label="Add Symptom"
+                  value={symptomInput}
+                  onChange={(e) => setSymptomInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddSymptom()}
+                />
+                <Button variant="contained" onClick={handleAddSymptom}>
+                  Add
+                </Button>
+              </Box>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+                {formData.symptoms.map((symptom, index) => (
+                  <Chip
+                    key={index}
+                    label={symptom}
+                    onDelete={() => handleRemoveSymptom(symptom)}
+                  />
+                ))}
+              </Box>
+              <Typography variant="h6" gutterBottom>Action Plan</Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                margin="normal"
+                label="Action Plan"
+                value={formData.actionPlan}
+                onChange={(e) => setFormData(prev => ({ ...prev, actionPlan: e.target.value }))}
+              />
+            </Box>
+          </>
         )}
         
         {activeTab === 1 && (
@@ -356,49 +418,49 @@ const CreateVisit = () => {
             onChange={(e) => handleNotesChange(e, 'phoneNotes')}
           />
         )}
-      </Box>
-    </Paper>
-  );
 
-  const renderSymptomsSection = () => (
-    <Paper sx={{ p: 2, mb: 2 }}>
-      <Typography variant="h6" gutterBottom>Symptoms</Typography>
-      <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-        <TextField
-          fullWidth
-          label="Add Symptom"
-          value={symptomInput}
-          onChange={(e) => setSymptomInput(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && handleAddSymptom()}
-        />
-        <Button variant="contained" onClick={handleAddSymptom}>
-          Add
-        </Button>
+        {activeTab === 7 && (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="h6" gutterBottom>Patient Medical History</Typography>
+            {medicalRecords.length === 0 ? (
+              <Typography color="textSecondary">No medical history records found.</Typography>
+            ) : (
+              <List>
+                {medicalRecords.map((record) => (
+                  <React.Fragment key={record.id}>
+                    <ListItem>
+                      <ListItemText
+                        primary={format(new Date(record.date), 'MMM dd, yyyy')}
+                        secondary={
+                          <>
+                            <Typography variant="body2" color="textPrimary">
+                              Type: {record.type}
+                            </Typography>
+                            {record.diagnosis && (
+                              <Typography variant="body2">
+                                Diagnosis: {record.diagnosis}
+                              </Typography>
+                            )}
+                            {record.treatment && (
+                              <Typography variant="body2">
+                                Treatment: {record.treatment}
+                              </Typography>
+                            )}
+                            <Typography variant="body2" color="textSecondary">
+                              {record.description}
+                            </Typography>
+                          </>
+                        }
+                      />
+                    </ListItem>
+                    <Divider />
+                  </React.Fragment>
+                ))}
+              </List>
+            )}
+          </Box>
+        )}
       </Box>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-        {formData.symptoms.map((symptom, index) => (
-          <Chip
-            key={index}
-            label={symptom}
-            onDelete={() => handleRemoveSymptom(symptom)}
-          />
-        ))}
-      </Box>
-    </Paper>
-  );
-
-  const renderActionPlan = () => (
-    <Paper sx={{ p: 2, mb: 2 }}>
-      <Typography variant="h6" gutterBottom>Action Plan</Typography>
-      <TextField
-        fullWidth
-        multiline
-        rows={4}
-        margin="normal"
-        label="Action Plan"
-        value={formData.actionPlan}
-        onChange={(e) => setFormData(prev => ({ ...prev, actionPlan: e.target.value }))}
-      />
     </Paper>
   );
 
@@ -442,8 +504,6 @@ const CreateVisit = () => {
       <form onSubmit={handleSubmit}>
         {renderVitalsForm()}
         {renderNotesForm()}
-        {renderSymptomsSection()}
-        {renderActionPlan()}
         {renderRecentVisits()}
         
         <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>

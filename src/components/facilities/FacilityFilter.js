@@ -72,7 +72,7 @@ const FacilityFilter = () => {
           disabled={loading}
           style={{ marginBottom: error ? '4px' : '0' }}
         >
-          🏥 Facilities ({userFacilities.length})
+          Facilities ({userFacilities.length})
           {loading && ' (Loading...)'}
         </button>
         {error && (

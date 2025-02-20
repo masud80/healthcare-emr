@@ -1,22 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { TextField, Button, Container, Typography, Box, Grid, Paper, Alert } from '@mui/material';
+import { TextField, Button, Container, Typography, Box, Grid, Paper, Alert, CircularProgress } from '@mui/material';
 import { updateFacility, fetchFacilityById } from '../../redux/thunks/facilitiesThunks';
+import { selectLoading, selectError, clearError } from '../../redux/slices/facilitiesSlice';
 
 const FacilityDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const facility = useSelector((state) => state.facilities.selectedFacility);
+  const loading = useSelector(selectLoading);
+  const error = useSelector(selectError);
   const [formData, setFormData] = useState({
     name: '',
     address: '',
     phone: '',
     email: '',
     type: '',
+    fax: '',
   });
-  const [submitError, setSubmitError] = useState(null);
+
+  // Clear any errors when component unmounts
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+    };
+  }, [dispatch]);
 
   useEffect(() => {
     if (id) {
@@ -32,6 +42,7 @@ const FacilityDetails = () => {
         phone: facility.phone || '',
         email: facility.email || '',
         type: facility.type || '',
+        fax: facility.fax || '',
       });
     }
   }, [facility]);
@@ -46,23 +57,22 @@ const FacilityDetails = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitError(null);
+    dispatch(clearError()); // Clear any previous errors
     
-    try {
-      const resultAction = await dispatch(updateFacility({ id, ...formData }));
-      if (updateFacility.fulfilled.match(resultAction)) {
-        navigate('/facilities');
-      } else if (updateFacility.rejected.match(resultAction)) {
-        setSubmitError(resultAction.payload || 'Failed to update facility');
-      }
-    } catch (error) {
-      setSubmitError('Failed to update facility. Please try again.');
-      console.error('Failed to update facility:', error);
+    const resultAction = await dispatch(updateFacility({ id, ...formData }));
+    
+    if (!resultAction.error) {
+      // Only navigate if the update was successful
+      navigate('/facilities');
     }
   };
 
-  if (!facility) {
-    return <div>Loading...</div>;
+  if (!facility && !error) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return (
@@ -71,9 +81,9 @@ const FacilityDetails = () => {
         <Typography variant="h4" gutterBottom>
           Edit Facility
         </Typography>
-        {submitError && (
+        {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
-            {submitError}
+            {error}
           </Alert>
         )}
         <form onSubmit={handleSubmit}>
@@ -86,6 +96,7 @@ const FacilityDetails = () => {
                 value={formData.name}
                 onChange={handleChange}
                 required
+                disabled={loading}
               />
             </Grid>
             <Grid item xs={12}>
@@ -96,6 +107,7 @@ const FacilityDetails = () => {
                 value={formData.address}
                 onChange={handleChange}
                 required
+                disabled={loading}
               />
             </Grid>
             <Grid item xs={12}>
@@ -106,6 +118,7 @@ const FacilityDetails = () => {
                 value={formData.phone}
                 onChange={handleChange}
                 required
+                disabled={loading}
               />
             </Grid>
             <Grid item xs={12}>
@@ -116,6 +129,7 @@ const FacilityDetails = () => {
                 value={formData.email}
                 onChange={handleChange}
                 required
+                disabled={loading}
               />
             </Grid>
             <Grid item xs={12}>
@@ -126,6 +140,17 @@ const FacilityDetails = () => {
                 value={formData.type}
                 onChange={handleChange}
                 required
+                disabled={loading}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Fax"
+                name="fax"
+                value={formData.fax}
+                onChange={handleChange}
+                disabled={loading}
               />
             </Grid>
             <Grid item xs={12}>
@@ -135,12 +160,14 @@ const FacilityDetails = () => {
                   variant="contained"
                   color="primary"
                   sx={{ mr: 2 }}
+                  disabled={loading}
                 >
-                  Save
+                  {loading ? <CircularProgress size={24} /> : 'Save'}
                 </Button>
                 <Button
                   variant="outlined"
                   onClick={() => navigate('/facilities')}
+                  disabled={loading}
                 >
                   Cancel
                 </Button>

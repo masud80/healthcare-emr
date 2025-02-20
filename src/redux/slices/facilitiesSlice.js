@@ -1,4 +1,11 @@
 import { createSlice } from '@reduxjs/toolkit';
+import { 
+  updateFacility, 
+  fetchFacilities, 
+  fetchUserFacilities, 
+  fetchFacilitiesByIds,
+  fetchFacilityById
+} from '../thunks/facilitiesThunks';
 
 const initialState = {
   facilities: [],
@@ -41,6 +48,99 @@ const facilitiesSlice = createSlice({
       state.loading = false;
       state.error = action.payload;
     },
+    clearError: (state) => {
+      state.error = null;
+    },
+  },
+  extraReducers: (builder) => {
+    // Handle fetchFacilities
+    builder
+      .addCase(fetchFacilities.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchFacilities.fulfilled, (state, action) => {
+        state.loading = false;
+        state.facilities = action.payload;
+        state.error = null;
+      })
+      .addCase(fetchFacilities.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message;
+      })
+
+    // Handle fetchUserFacilities
+      .addCase(fetchUserFacilities.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchUserFacilities.fulfilled, (state, action) => {
+        state.loading = false;
+        state.userFacilities = action.payload;
+        state.error = null;
+      })
+      .addCase(fetchUserFacilities.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message;
+      })
+
+    // Handle fetchFacilitiesByIds
+      .addCase(fetchFacilitiesByIds.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchFacilitiesByIds.fulfilled, (state, action) => {
+        state.loading = false;
+        state.selectedFacilities = action.payload;
+        state.error = null;
+      })
+      .addCase(fetchFacilitiesByIds.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message;
+      })
+
+    // Handle fetchFacilityById
+      .addCase(fetchFacilityById.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchFacilityById.fulfilled, (state, action) => {
+        state.loading = false;
+        state.selectedFacility = action.payload;
+        state.error = null;
+      })
+      .addCase(fetchFacilityById.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message;
+      })
+
+    // Handle updateFacility
+      .addCase(updateFacility.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateFacility.fulfilled, (state, action) => {
+        state.loading = false;
+        state.error = null;
+        const updatedFacility = action.payload;
+        
+        // Update selectedFacility
+        state.selectedFacility = updatedFacility;
+        
+        // Update in facilities array
+        state.facilities = state.facilities.map(facility => 
+          facility.id === updatedFacility.id ? updatedFacility : facility
+        );
+        
+        // Update in userFacilities array
+        state.userFacilities = state.userFacilities.map(facility => 
+          facility.id === updatedFacility.id ? updatedFacility : facility
+        );
+      })
+      .addCase(updateFacility.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || 'Failed to update facility';
+      });
   },
 });
 
@@ -51,6 +151,7 @@ export const {
   setSelectedFacilities,
   setLoading,
   setError,
+  clearError,
 } = facilitiesSlice.actions;
 
 // Selectors
