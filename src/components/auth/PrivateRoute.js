@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { selectUser, selectLoading, selectRole } from '../../redux/slices/authSlice';
+import '../../styles/components.css';
 
 const PrivateRoute = ({ requireAdmin, requireFacilityAdmin }) => {
   const user = useSelector(selectUser);
@@ -9,7 +10,13 @@ const PrivateRoute = ({ requireAdmin, requireFacilityAdmin }) => {
   const loading = useSelector(selectLoading);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="container">
+        <div className="loading-spinner">
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {

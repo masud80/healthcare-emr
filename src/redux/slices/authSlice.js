@@ -11,28 +11,40 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    setUser: (state, action) => {
-      // Only store serializable user data
-      if (action.payload) {
-        const { uid, email, role } = action.payload;
-        state.user = { uid, email };
-        state.role = role; // Set role when setting user
-      } else {
-        state.user = null;
-        state.role = null; // Clear role when clearing user
+    setUser: {
+      reducer(state, action) {
+        if (action.payload) {
+          const { uid, email, role } = action.payload;
+          state.user = { uid, email };
+          state.role = role;
+        } else {
+          state.user = null;
+          state.role = null;
+        }
+      },
+      prepare(userData) {
+        return {
+          payload: userData ? {
+            uid: userData.uid,
+            email: userData.email,
+            role: userData.role
+          } : null
+        };
       }
     },
-    setLoading: (state, action) => {
+    setLoading(state, action) {
       state.loading = action.payload;
     },
-    setError: (state, action) => {
+    setError(state, action) {
       state.error = action.payload;
     },
-    logout: (state) => {
+    logout(state) {
       state.user = null;
       state.role = null;
-    },
-  },
+      state.loading = false;
+      state.error = null;
+    }
+  }
 });
 
 export const { setUser, setLoading, setError, logout } = authSlice.actions;

@@ -4,7 +4,7 @@ import { useDispatch } from 'react-redux';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../../firebase/config';
-import { setUser, setLoading, setError } from '../../redux/slices/authSlice';
+import { loginUser } from '../../redux/actions/authActions';
 import '../../styles/components.css';
 
 const Login = () => {
@@ -27,26 +27,44 @@ const Login = () => {
       await userCredential.user.getIdToken(true);
       const idTokenResult = await userCredential.user.getIdTokenResult();
       
+      // Get user document from Firestore
       const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
       
       if (userDoc.exists()) {
-        const userData = userDoc.data();
-        // Check admin claim from token
-        const role = idTokenResult.claims.admin === true ? 'admin' : (userData.role || 'user');
-            
-        dispatch(setUser({
+        const firestoreData = userDoc.data();
+        console.log('User data:', firestoreData);
+        console.log('Token claims:', idTokenResult.claims);
+        
+        // Determine role
+        const role = idTokenResult.claims.admin === true ? 'admin' : firestoreData.role || 'user';
+        console.log('Determined role:', role);
+        
+        // Create minimal serializable user data
+        const userData = {
           uid: userCredential.user.uid,
           email: userCredential.user.email,
-          role: role,
-          facilityId: userData.facilityId || null,
-        }));
+          role: role
+        };
+
+        // Update Redux state using action creator
+        await dispatch(loginUser(userData));
         navigate('/dashboard');
       } else {
         setError('User data not found');
       }
     } catch (error) {
-      console.error('Login error:', error);
-      setError('Invalid email or password');
+      console.error('Login error details:', {
+        code: error.code,
+        message: error.message,
+        fullError: error
+      });
+      if (error.code === 'auth/invalid-credential') {
+        setError('Invalid email or password');
+      } else if (error.code === 'auth/user-not-found') {
+        setError('User not found');
+      } else {
+        setError(`Login failed: ${error.message}`);
+      }
     } finally {
       setLoading(false);
     }

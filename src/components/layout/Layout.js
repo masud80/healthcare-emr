@@ -1,6 +1,8 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { selectUser, selectRole } from '../../redux/slices/authSlice';
+import FacilityFilter from '../facilities/FacilityFilter';
 import { 
   AppBar, 
   Box, 
@@ -10,27 +12,38 @@ import {
   List, 
   ListItem, 
   ListItemIcon, 
-  ListItemText, 
+  ListItemText,
+  ListItemButton,
   Toolbar, 
-  Typography,
-  Chip,
-  Stack
+  Typography
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
 import PersonIcon from '@mui/icons-material/Person';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import PeopleIcon from '@mui/icons-material/People';
+import EventIcon from '@mui/icons-material/Event';
+import BusinessIcon from '@mui/icons-material/Business';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 
 const drawerWidth = 240;
 
-const Layout = ({ children }) => {
+const Layout = () => {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const navigate = useNavigate();
-  const user = useSelector((state) => state.auth.user);
+  const user = useSelector(selectUser);
+  const role = useSelector(selectRole);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
+  };
+
+  const capitalizeRole = (role) => {
+    return role?.split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   };
 
   const handleLogout = async () => {
@@ -45,27 +58,65 @@ const Layout = ({ children }) => {
   const drawer = (
     <div>
       <List>
-        <ListItem button onClick={handleLogout}>
-          <ListItemIcon>
-            <LogoutIcon />
-          </ListItemIcon>
-          <ListItemText primary="Logout" />
-        </ListItem>
         {user && (
           <ListItem>
             <ListItemText primary={user.name} secondary={user.email} />
             <ListItemText secondary={capitalizeRole(user.role)} />
           </ListItem>
         )}
+        <ListItem component="div">
+          <ListItemButton onClick={() => navigate('/dashboard')}>
+            <ListItemIcon>
+              <DashboardIcon />
+            </ListItemIcon>
+            <ListItemText primary="Dashboard" />
+          </ListItemButton>
+        </ListItem>
+        <ListItem component="div">
+          <ListItemButton onClick={() => navigate('/patients')}>
+            <ListItemIcon>
+              <PeopleIcon />
+            </ListItemIcon>
+            <ListItemText primary="Patients" />
+          </ListItemButton>
+        </ListItem>
+        <ListItem component="div">
+          <ListItemButton onClick={() => navigate('/appointments')}>
+            <ListItemIcon>
+              <EventIcon />
+            </ListItemIcon>
+            <ListItemText primary="Appointments" />
+          </ListItemButton>
+        </ListItem>
+        <ListItem component="div">
+          <ListItemButton onClick={() => navigate('/facilities')}>
+            <ListItemIcon>
+              <BusinessIcon />
+            </ListItemIcon>
+            <ListItemText primary="Facilities" />
+          </ListItemButton>
+        </ListItem>
+        {role === 'admin' && (
+          <ListItem component="div">
+            <ListItemButton onClick={() => navigate('/users')}>
+              <ListItemIcon>
+                <AdminPanelSettingsIcon />
+              </ListItemIcon>
+              <ListItemText primary="User Management" />
+            </ListItemButton>
+          </ListItem>
+        )}
+        <ListItem component="div">
+          <ListItemButton onClick={handleLogout}>
+            <ListItemIcon>
+              <LogoutIcon />
+            </ListItemIcon>
+            <ListItemText primary="Logout" />
+          </ListItemButton>
+        </ListItem>
       </List>
     </div>
   );
-
-  const capitalizeRole = (role) => {
-    return role?.split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  };
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -91,6 +142,9 @@ const Layout = ({ children }) => {
             <Typography variant="h6" noWrap component="div">
               Healthcare EMR
             </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <FacilityFilter />
           </Box>
         </Toolbar>
       </AppBar>
@@ -129,7 +183,7 @@ const Layout = ({ children }) => {
         sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}
       >
         <Toolbar />
-        {children}
+        <Outlet />
       </Box>
     </Box>
   );

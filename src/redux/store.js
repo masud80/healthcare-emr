@@ -13,28 +13,9 @@ const store = configureStore({
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
-      serializableCheck: {
-        // Ignore these action types
-        ignoredActions: [
-          'appointments/setSelectedAppointment',
-          'auth/setUser',
-          'auth/setError',
-          'facilities/setSelectedFacility'
-        ],
-        // Ignore these field paths in all actions
-        ignoredActionPaths: [
-          'payload.date',
-          'payload.user',
-          'payload.error'
-        ],
-        // Ignore these paths in the state
-        ignoredPaths: [
-          'appointments.selectedAppointment.date',
-          'auth.user',
-          'facilities.selectedFacility'
-        ],
-      },
-    }),
+      serializableCheck: false,
+      immutableCheck: false
+    })
 });
 
 export default store;

@@ -10,8 +10,25 @@ const FacilityFilter = () => {
   const { userFacilities, selectedFacilities } = useSelector((state) => state.facilities);
 
   useEffect(() => {
-    dispatch(fetchUserFacilities());
+    dispatch(fetchUserFacilities()).then(() => {
+      console.log('User Facilities:', userFacilities);
+      // Initialize selectedFacilities with all user facilities if none selected
+      if (selectedFacilities.length === 0 && userFacilities.length > 0) {
+        const facilityIds = userFacilities.map(f => f.id);
+        console.log('Setting selected facilities:', facilityIds);
+        dispatch(setSelectedFacilities(facilityIds));
+      }
+    });
   }, [dispatch]);
+
+  // Separate useEffect for initialization to avoid dependency cycle
+  useEffect(() => {
+    if (selectedFacilities.length === 0 && userFacilities.length > 0) {
+      const facilityIds = userFacilities.map(f => f.id);
+      console.log('Initializing selected facilities:', facilityIds);
+      dispatch(setSelectedFacilities(facilityIds));
+    }
+  }, [userFacilities, selectedFacilities.length, dispatch]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -41,17 +58,26 @@ const FacilityFilter = () => {
       </button>
       {isOpen && (
         <div className="facility-dropdown">
-          {userFacilities.map((facility) => (
-            <label key={facility.id} className="facility-checkbox">
-              <input
-                type="checkbox"
-                checked={selectedFacilities.includes(facility.id)}
-                onChange={() => handleFacilityToggle(facility.id)}
-              />
-              <span>{facility.name}</span>
-            </label>
-          ))}
-          {userFacilities.length === 0 && (
+          <div style={{ padding: '8px 16px', borderBottom: '1px solid #eee' }}>
+            <strong>Available Facilities</strong>
+          </div>
+          {userFacilities.length > 0 ? (
+            userFacilities.map((facility) => (
+              <label key={facility.id} className="facility-checkbox">
+                <input
+                  type="checkbox"
+                  checked={selectedFacilities.includes(facility.id)}
+                  onChange={() => handleFacilityToggle(facility.id)}
+                />
+                <span style={{ marginLeft: '8px' }}>{facility.name}</span>
+                {facility.type && (
+                  <span style={{ marginLeft: '4px', color: '#666', fontSize: '0.9em' }}>
+                    ({facility.type})
+                  </span>
+                )}
+              </label>
+            ))
+          ) : (
             <div className="facility-empty">No facilities assigned</div>
           )}
         </div>

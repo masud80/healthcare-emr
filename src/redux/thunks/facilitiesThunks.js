@@ -13,20 +13,30 @@ export const fetchUserFacilities = () => async (dispatch) => {
 
     // Get user's facility assignments
     const userFacilitiesQuery = query(
-      collection(db, 'userFacilities'),
+      collection(db, 'user_facilities'),
       where('userId', '==', user.uid)
     );
     const userFacilitiesSnapshot = await getDocs(userFacilitiesQuery);
-    const facilityIds = userFacilitiesSnapshot.docs.map(doc => doc.data().facilityId);
+    // Get unique facility IDs
+    const facilityIds = [...new Set(userFacilitiesSnapshot.docs.map(doc => doc.data().facilityId))];
+    console.log('Unique facility IDs:', facilityIds);
 
     // Get facility details for assigned facilities
     const facilitiesSnapshot = await getDocs(collection(db, 'facilities'));
     const userFacilities = facilitiesSnapshot.docs
-      .map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }))
-      .filter(facility => facilityIds.includes(facility.id));
+      .filter(doc => facilityIds.includes(doc.id))
+      .map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.name || 'Unnamed Facility',
+          type: data.type || '',
+          address: data.address || '',
+          phone: data.phone || ''
+        };
+      });
+
+    console.log('Final userFacilities:', userFacilities);
 
     dispatch(setUserFacilities(userFacilities));
   } catch (error) {

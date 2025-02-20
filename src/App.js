@@ -11,6 +11,7 @@ import AppointmentList from './components/appointments/AppointmentList';
 import AppointmentDetails from './components/appointments/AppointmentDetails';
 import FacilityList from './components/facilities/FacilityList';
 import FacilityDetails from './components/facilities/FacilityDetails';
+import CreateFacility from './components/facilities/CreateFacility';
 import UserManagement from './components/admin/UserManagement';
 import PrivateRoute from './components/auth/PrivateRoute';
 import DatabaseInitializer from './components/utils/DatabaseInitializer';
@@ -36,6 +37,9 @@ function App() {
               <Route path="appointments" element={<AppointmentList />} />
               <Route path="appointments/:id" element={<AppointmentDetails />} />
               <Route path="facilities" element={<FacilityList />} />
+              <Route element={<PrivateRoute requireFacilityAdmin={true} />}>
+                <Route path="facilities/new" element={<CreateFacility />} />
+              </Route>
               <Route path="facilities/:id" element={<FacilityDetails />} />
               <Route path="records" element={<MedicalRecords />} />
             </Route>

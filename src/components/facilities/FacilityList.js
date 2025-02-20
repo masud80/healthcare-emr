@@ -12,37 +12,44 @@ const FacilityList = () => {
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
   const user = useSelector((state) => state.auth.user);
-  const isAdmin = user?.role === 'admin';
-  const isFacilityAdmin = user?.role === 'facility_admin';
+  const role = useSelector((state) => state.auth.role);
+  const isAdmin = role === 'admin';
+  const isFacilityAdmin = role === 'facility_admin';
 
   useEffect(() => {
     const fetchFacilities = async () => {
       try {
-        let facilitiesQuery;
+        let facilitiesData = [];
         
         if (isAdmin) {
           // Admins can see all facilities
-          facilitiesQuery = collection(db, 'facilities');
-        } else if (isFacilityAdmin) {
-          // Facility admins can see facilities they manage
-          facilitiesQuery = query(
-            collection(db, 'facilities'),
-            where('adminIds', 'array-contains', user.uid)
-          );
+          const snapshot = await getDocs(collection(db, 'facilities'));
+          facilitiesData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
         } else {
-          // Regular users can only see their connected facilities that are active
-          facilitiesQuery = query(
-            collection(db, 'facilities'),
-            where('status', '==', 'active'),
-            where('connectedUserIds', 'array-contains', user.uid)
+          // Get user's facilities from user_facilities collection
+          const userFacilitiesQuery = query(
+            collection(db, 'user_facilities'),
+            where('userId', '==', user.uid)
           );
+          const userFacilitiesSnapshot = await getDocs(userFacilitiesQuery);
+          
+          // Get facility IDs assigned to user
+          const facilityIds = userFacilitiesSnapshot.docs.map(doc => doc.data().facilityId);
+          
+          // If user has facilities assigned, fetch their details
+          if (facilityIds.length > 0) {
+            const facilitiesSnapshot = await getDocs(collection(db, 'facilities'));
+            facilitiesData = facilitiesSnapshot.docs
+              .filter(doc => facilityIds.includes(doc.id))
+              .map(doc => ({
+                id: doc.id,
+                ...doc.data()
+              }));
+          }
         }
-
-        const snapshot = await getDocs(facilitiesQuery);
-        const facilitiesData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
 
         // Filter out inactive facilities for non-admin users
         const filteredFacilities = facilitiesData.filter(facility => 
