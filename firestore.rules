@@ -50,6 +50,37 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Prescriptions collection rules
+    match /prescriptions/{prescriptionId} {
+      function isDoctor() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'doctor';
+      }
+
+      function isNurse() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'nurse';
+      }
+
+      function canPrescribe() {
+        return isDoctor() || isNurse();
+      }
+
+      // Allow read if authenticated and connected to the patient's facility
+      allow read: if request.auth != null && (
+        isAdmin() ||
+        isFacilityAdmin() ||
+        isUserConnectedToFacility(resource.data.facilityId)
+      );
+
+      // Allow create if authenticated and is a doctor or nurse
+      allow create: if request.auth != null && canPrescribe();
+
+      // Allow update if authenticated and is a doctor or nurse
+      allow update: if request.auth != null && canPrescribe();
+
+      // No direct deletion allowed
+      allow delete: if false;
+    }
+
     // Default rule for other collections
     match /{document=**} {
       allow read, write: if request.auth != null;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { fetchUserFacilities } from '../../redux/thunks/facilitiesThunks';
 import { 
   TextField, 
   Popper, 
@@ -10,9 +11,11 @@ import {
   ListItemText,
   Box,
   CircularProgress,
-  InputAdornment
+  InputAdornment,
+  IconButton
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import CloseIcon from '@mui/icons-material/Close';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { selectUser, selectRole } from '../../redux/slices/authSlice';
@@ -24,8 +27,13 @@ const GlobalSearch = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const inputRef = useRef(null);
   const navigate = useNavigate();
-  const user = useSelector(selectUser);
+  const dispatch = useDispatch();
   const role = useSelector(selectRole);
+  const { userFacilities } = useSelector((state) => state.facilities);
+
+  useEffect(() => {
+    dispatch(fetchUserFacilities());
+  }, [dispatch]);
 
   useEffect(() => {
     if (inputRef.current) {
@@ -41,44 +49,87 @@ const GlobalSearch = () => {
 
     setLoading(true);
     try {
+      // Get patients based on user's facilities
       let baseQuery = collection(db, 'patients');
-      let constraints = [
-        orderBy('lastName'),
-        limit(10)
-      ];
-
-      // Add facility filter for non-admin users
-      if (role !== 'admin' && user.facilities) {
-        constraints.push(where('facilityIds', 'array-contains-any', user.facilities));
+      let patientsQuery;
+      if (role === 'admin') {
+        patientsQuery = query(baseQuery, limit(100));
+      } else if (userFacilities?.length > 0) {
+        const facilityIds = userFacilities.map(f => f.id);
+        patientsQuery = query(
+          baseQuery,
+          where('facilityId', 'in', facilityIds),
+          limit(100)
+        );
+      } else {
+        setSearchResults([]);
+        return;
       }
 
-      // Create query with search term
-      const termLower = term.toLowerCase();
-      const termUpper = term.charAt(0).toUpperCase() + term.slice(1);
-      
-      const queries = [
-        query(baseQuery, ...constraints, where('lastName', '>=', termLower), where('lastName', '<=', termLower + '\uf8ff')),
-        query(baseQuery, ...constraints, where('firstName', '>=', termLower), where('firstName', '<=', termLower + '\uf8ff')),
-        query(baseQuery, ...constraints, where('lastName', '>=', termUpper), where('lastName', '<=', termUpper + '\uf8ff')),
-        query(baseQuery, ...constraints, where('firstName', '>=', termUpper), where('firstName', '<=', termUpper + '\uf8ff'))
-      ];
+      // Get medical records
+      const medicalRecordsRef = collection(db, 'medical_records');
+      const medicalRecordsQuery = query(medicalRecordsRef, limit(100));
 
-      const results = await Promise.all(queries.map(q => getDocs(q)));
-      
-      // Combine and deduplicate results
-      const combinedResults = results.flatMap(snapshot => 
-        snapshot.docs.map(doc => ({
+      // Execute both queries in parallel
+      const [patientsSnapshot, medicalRecordsSnapshot] = await Promise.all([
+        getDocs(patientsQuery),
+        getDocs(medicalRecordsQuery)
+      ]);
+
+      // Create a map of medical records by patient ID
+      const medicalRecordsByPatient = {};
+      medicalRecordsSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        if (!medicalRecordsByPatient[data.patientId]) {
+          medicalRecordsByPatient[data.patientId] = [];
+        }
+        medicalRecordsByPatient[data.patientId].push({
           id: doc.id,
-          ...doc.data()
-        }))
-      );
+          ...data
+        });
+      });
+      
+      // Client-side filtering
+      const searchTermLower = term.toLowerCase();
+      const filteredResults = patientsSnapshot.docs
+        .map(doc => {
+          const patientData = doc.data();
+          const patientId = doc.id;
+          const medicalRecords = medicalRecordsByPatient[patientId] || [];
+          
+          // Check if any medical records match the search term
+          const matchingRecords = medicalRecords.filter(record => 
+            record.description?.toLowerCase().includes(searchTermLower) ||
+            record.diagnosis?.toLowerCase().includes(searchTermLower) ||
+            record.treatment?.toLowerCase().includes(searchTermLower) ||
+            record.type?.toLowerCase().includes(searchTermLower)
+          );
 
-      // Remove duplicates based on patient ID
-      const uniqueResults = Array.from(
-        new Map(combinedResults.map(item => [item.id, item])).values()
-      );
+          return {
+            id: patientId,
+            name: patientData.name || 'Unknown',
+            dateOfBirth: patientData.dateOfBirth || null,
+            contact: patientData.contact || '',
+            email: patientData.email || '',
+            bloodType: patientData.bloodType || '',
+            facilityId: patientData.facilityId || '',
+            matchingRecords: matchingRecords.slice(0, 3) // Include up to 3 matching records
+          };
+        })
+        .filter(patient => {
+          // Format date of birth for searching if it exists
+          const dobFormatted = patient.dateOfBirth ? 
+            new Date(patient.dateOfBirth).toLocaleDateString() : '';
+          
+          return patient.name.toLowerCase().includes(searchTermLower) ||
+            patient.email.toLowerCase().includes(searchTermLower) ||
+            (patient.contact && patient.contact.includes(searchTermLower)) ||
+            (dobFormatted && dobFormatted.includes(searchTermLower)) ||
+            patient.matchingRecords.length > 0; // Include if medical records match
+        })
+        .slice(0, 10); // Limit to top 10 results
 
-      setSearchResults(uniqueResults);
+      setSearchResults(filteredResults);
     } catch (error) {
       console.error('Error searching patients:', error);
       setSearchResults([]);
@@ -101,12 +152,12 @@ const GlobalSearch = () => {
   };
 
   return (
-    <Box sx={{ position: 'relative', width: '400px', mx: 'auto' }}>
+    <Box sx={{ position: 'relative', width: '500px', mx: 'auto' }}>
       <TextField
         inputRef={inputRef}
         fullWidth
         variant="outlined"
-        placeholder="Search patients..."
+        placeholder="Search patients by name, DOB (MM/DD/YYYY), medical history..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         size="small"
@@ -147,23 +198,56 @@ const GlobalSearch = () => {
         open={searchResults.length > 0}
         anchorEl={anchorEl}
         placement="bottom-start"
-        style={{ width: '400px', zIndex: 1300 }}
+        style={{ width: '500px', zIndex: 1300 }}
       >
         <Paper elevation={3}>
-          <List>
-            {searchResults.map((patient) => (
+          <Box sx={{ position: 'relative' }}>
+            <IconButton
+              size="small"
+              onClick={() => setSearchResults([])}
+              sx={{
+                position: 'absolute',
+                right: 8,
+                top: 8,
+                color: 'rgba(0, 0, 0, 0.54)'
+              }}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+            <List sx={{ pt: 1, pb: 1 }}>
+              {searchResults.map((patient) => (
               <ListItem 
                 key={patient.id} 
                 button 
                 onClick={() => handlePatientClick(patient.id)}
+                sx={{ flexDirection: 'column', alignItems: 'flex-start' }}
               >
                 <ListItemText 
-                  primary={`${patient.firstName} ${patient.lastName}`}
-                  secondary={`DOB: ${patient.dateOfBirth || 'N/A'}`}
+                  primary={patient.name}
+                  secondary={
+                    <>
+                      <div>DOB: {patient.dateOfBirth || 'N/A'}</div>
+                      {patient.matchingRecords.length > 0 && (
+                        <div style={{ marginTop: '8px' }}>
+                          <strong>Matching Records:</strong>
+                          {patient.matchingRecords.map((record, index) => (
+                            <div key={record.id} style={{ marginLeft: '8px', fontSize: '0.9em' }}>
+                              <div>{new Date(record.date).toLocaleDateString()} - {record.type}</div>
+                              {record.diagnosis && <div>Diagnosis: {record.diagnosis}</div>}
+                              {record.treatment && <div>Treatment: {record.treatment}</div>}
+                              {record.description && <div>Notes: {record.description}</div>}
+                              {index < patient.matchingRecords.length - 1 && <div style={{ margin: '4px 0', borderBottom: '1px dashed #ccc' }} />}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  }
                 />
               </ListItem>
             ))}
-          </List>
+            </List>
+          </Box>
         </Paper>
       </Popper>
     </Box>

@@ -5,8 +5,11 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { setSelectedPatient, fetchPatientDetails } from '../../redux/slices/patientsSlice';
 import { fetchFacilities } from '../../redux/thunks/facilitiesThunks';
+import { fetchPatientPrescriptions } from '../../redux/slices/prescriptionsSlice';
+import PrescriptionForm from '../prescriptions/PrescriptionForm';
 import format from 'date-fns/format';
 import '../../styles/components.css';
+import '../../styles/prescriptions.css';
 
 const TabPanel = ({ children, value, index }) => (
   <div hidden={value !== index}>
@@ -21,15 +24,18 @@ const PatientDetails = () => {
   const { selectedPatient, loading, error } = useSelector((state) => state.patients);
   const { role } = useSelector((state) => state.auth);
   const facilities = useSelector((state) => state.facilities.facilities);
+  const prescriptions = useSelector((state) => state.prescriptions.prescriptions);
   const [tabValue, setTabValue] = useState(0);
   const [openNoteDialog, setOpenNoteDialog] = useState(false);
+  const [openPrescriptionDialog, setOpenPrescriptionDialog] = useState(false);
   const [newNote, setNewNote] = useState('');
   const [editingFacility, setEditingFacility] = useState(false);
   const [selectedFacilityId, setSelectedFacilityId] = useState('');
 
   useEffect(() => {
     dispatch(fetchFacilities());
-  }, [dispatch]);
+    dispatch(fetchPatientPrescriptions(id));
+  }, [dispatch, id]);
 
   useEffect(() => {
     if (selectedPatient?.facilityId) {
@@ -137,6 +143,12 @@ const PatientDetails = () => {
             onClick={() => setTabValue(2)}
           >
             Notes
+          </button>
+          <button 
+            className={`tab ${tabValue === 3 ? 'active' : ''}`}
+            onClick={() => setTabValue(3)}
+          >
+            Prescriptions
           </button>
         </div>
 
@@ -258,6 +270,55 @@ const PatientDetails = () => {
             ))}
           </ul>
         </TabPanel>
+
+        <TabPanel value={tabValue} index={3}>
+          <div className="flex flex-between flex-center">
+            <h2 className="subtitle">Prescriptions</h2>
+            {(role === 'doctor' || role === 'nurse') && (
+              <button
+                className="button button-primary"
+                onClick={() => setOpenPrescriptionDialog(true)}
+              >
+                New Prescription
+              </button>
+            )}
+          </div>
+          <div className="paper">
+            <h3>Current Pharmacy</h3>
+            {selectedPatient.defaultPharmacy ? (
+              <div>
+                <p>Name: {selectedPatient.defaultPharmacy.name}</p>
+                <p>Address: {selectedPatient.defaultPharmacy.address}</p>
+                <p>Phone: {selectedPatient.defaultPharmacy.phone}</p>
+              </div>
+            ) : (
+              <p>No default pharmacy set</p>
+            )}
+          </div>
+          <div className="prescription-list">
+            {prescriptions.map((prescription, index) => (
+              <div key={index} className="paper">
+                <div className="prescription-header">
+                  <h4>Prescription {format(new Date(prescription.createdAt), 'MM/dd/yyyy')}</h4>
+                  <span className={`status status-${prescription.status}`}>
+                    {prescription.status}
+                  </span>
+                </div>
+                <div className="medications-list">
+                  {prescription.medications.map((med, idx) => (
+                    <div key={idx} className="medication-item">
+                      <h5>{med.name}</h5>
+                      <p>Dosage: {med.dosage}</p>
+                      <p>Route: {med.route}</p>
+                      <p>Frequency: {med.frequency}</p>
+                      <p>Duration: {med.duration}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </TabPanel>
       </div>
 
       {openNoteDialog && (
@@ -285,6 +346,21 @@ const PatientDetails = () => {
               >
                 Add
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {openPrescriptionDialog && (
+        <div className="dialog-overlay">
+          <div className="dialog dialog-large">
+            <h3 className="dialog-title">New Prescription</h3>
+            <div className="dialog-content">
+              <PrescriptionForm
+                patientId={id}
+                defaultPharmacy={selectedPatient.defaultPharmacy}
+                onClose={() => setOpenPrescriptionDialog(false)}
+              />
             </div>
           </div>
         </div>

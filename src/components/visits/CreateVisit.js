@@ -22,6 +22,7 @@ import {
   ListItemText,
   Divider
 } from '@mui/material';
+import PrescriptionForm from '../prescriptions/PrescriptionForm';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import format from 'date-fns/format';
 
@@ -63,6 +64,7 @@ const CreateVisit = () => {
     },
     symptoms: [],
     actionPlan: '',
+    prescriptions: [],
     provider: {
       id: '', // Will be set from auth context
       name: '',
@@ -267,6 +269,7 @@ const CreateVisit = () => {
         <Tab label="Simple" />
         <Tab label="Phone" />
         <Tab label="Medical History" />
+        <Tab label="Prescriptions" />
       </Tabs>
       
       <Box sx={{ mt: 2 }}>
@@ -458,6 +461,18 @@ const CreateVisit = () => {
                 ))}
               </List>
             )}
+          </Box>
+        )}
+
+        {activeTab === 8 && (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="h6" gutterBottom>Prescriptions</Typography>
+            <PrescriptionForm
+              patientId={patientId}
+              onPrescriptionChange={(prescriptions) => 
+                setFormData(prev => ({ ...prev, prescriptions }))
+              }
+            />
           </Box>
         )}
       </Box>

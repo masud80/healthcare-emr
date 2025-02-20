@@ -5,26 +5,26 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "lastName",
+          "fieldPath": "name",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "facilityIds",
-          "arrayConfig": "CONTAINS"
+          "fieldPath": "facilityId",
+          "order": "ASCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "patients",
+      "collectionGroup": "medical_records",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "firstName",
+          "fieldPath": "patientId",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "facilityIds",
-          "arrayConfig": "CONTAINS"
+          "fieldPath": "date",
+          "order": "DESCENDING"
         }
       ]
     },
@@ -39,20 +39,6 @@
         {
           "fieldPath": "createdAt",
           "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "patients",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "facilityId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "name",
-          "order": "ASCENDING"
         }
       ]
     },

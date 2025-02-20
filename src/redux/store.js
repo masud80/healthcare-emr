@@ -1,25 +1,22 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './slices/authSlice';
-import patientsReducer from './slices/patientsSlice';
-import appointmentsReducer from './slices/appointmentsSlice';
-import visitsReducer from './slices/visitsSlice';
 import facilitiesReducer from './slices/facilitiesSlice';
+import patientsReducer from './slices/patientsSlice';
+import visitsReducer from './slices/visitsSlice';
 import auditReducer from './slices/auditSlice';
+import appointmentsReducer from './slices/appointmentsSlice';
+import prescriptionsReducer from './slices/prescriptionsSlice';
 
-const store = configureStore({
+export const store = configureStore({
   reducer: {
     auth: authReducer,
-    patients: patientsReducer,
-    appointments: appointmentsReducer,
-    visits: visitsReducer,
     facilities: facilitiesReducer,
+    patients: patientsReducer,
+    visits: visitsReducer,
     audit: auditReducer,
-  },
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      serializableCheck: false,
-      immutableCheck: false
-    })
+    appointments: appointmentsReducer,
+    prescriptions: prescriptionsReducer
+  }
 });
 
 export default store;
