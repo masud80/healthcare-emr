@@ -13,11 +13,15 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  List,
+  ListItem,
+  ListItemText
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import { createPrescription, updatePharmacy } from '../../redux/slices/prescriptionsSlice';
+import { searchPharmacies } from '../../utils/googlePlaces';
 
 const emptyMedication = {
   name: '',
@@ -41,6 +45,7 @@ const PrescriptionForm = ({ patientId, defaultPharmacy, onClose }) => {
   const [medications, setMedications] = useState([{ ...emptyMedication }]);
   const [pharmacy, setPharmacy] = useState(defaultPharmacy || { name: '', address: '', phone: '' });
   const [showPharmacyDialog, setShowPharmacyDialog] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
 
   const handleAddMedication = () => {
     setMedications([...medications, { ...emptyMedication }]);
@@ -58,6 +63,33 @@ const PrescriptionForm = ({ patientId, defaultPharmacy, onClose }) => {
       [field]: value
     };
     setMedications(newMedications);
+  };
+
+  const handlePharmacyChange = async (e) => {
+    const { name, value } = e.target;
+    setPharmacy(prev => ({ ...prev, [name]: value }));
+    
+    if (name === 'name' && value.length >= 3) {
+      try {
+        const results = await searchPharmacies(value);
+        setSearchResults(results || []);
+      } catch (error) {
+        console.error('Error searching pharmacies:', error);
+        setSearchResults([]);
+      }
+    } else if (name === 'name' && value.length < 3) {
+      setSearchResults([]);
+    }
+  };
+
+  const handleSearchResultClick = (result) => {
+    setPharmacy({
+      name: result.name,
+      address: result.address,
+      phone: result.phone || '',
+      location: result.location
+    });
+    setSearchResults([]);
   };
 
   const handlePharmacyUpdate = () => {
@@ -177,30 +209,57 @@ const PrescriptionForm = ({ patientId, defaultPharmacy, onClose }) => {
         </Button>
       </Box>
 
-      <Dialog open={showPharmacyDialog} onClose={() => setShowPharmacyDialog(false)}>
+      <Dialog 
+        open={showPharmacyDialog} 
+        onClose={() => setShowPharmacyDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
         <DialogTitle>
           {pharmacy.name ? 'Update Pharmacy' : 'Add Pharmacy'}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
             <TextField
+              name="name"
               label="Pharmacy Name"
               value={pharmacy.name}
-              onChange={(e) => setPharmacy({ ...pharmacy, name: e.target.value })}
+              onChange={handlePharmacyChange}
               fullWidth
-              required
+              placeholder="Start typing pharmacy name to search"
+              helperText="Type at least 3 characters to search"
+              InputProps={{}}
             />
+            {searchResults.length > 0 && (
+              <List sx={{ maxHeight: 200, overflow: 'auto', bgcolor: 'background.paper' }}>
+                {searchResults.map((result, index) => (
+                  <ListItem 
+                    key={index} 
+                    onClick={() => handleSearchResultClick(result)}
+                    divider
+                    sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
+                  >
+                    <ListItemText
+                      primary={result.name}
+                      secondary={`${result.address}${result.phone ? ` • ${result.phone}` : ''}`}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            )}
             <TextField
+              name="address"
               label="Address"
               value={pharmacy.address}
-              onChange={(e) => setPharmacy({ ...pharmacy, address: e.target.value })}
+              onChange={handlePharmacyChange}
               fullWidth
               required
             />
             <TextField
+              name="phone"
               label="Phone Number"
               value={pharmacy.phone}
-              onChange={(e) => setPharmacy({ ...pharmacy, phone: e.target.value })}
+              onChange={handlePharmacyChange}
               fullWidth
               required
             />

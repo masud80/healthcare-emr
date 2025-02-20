@@ -16,7 +16,8 @@ import {
   ListItemText,
   ListItemButton,
   Toolbar, 
-  Typography
+  Typography,
+  Collapse
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -27,6 +28,9 @@ import EventIcon from '@mui/icons-material/Event';
 import BusinessIcon from '@mui/icons-material/Business';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import AssessmentIcon from '@mui/icons-material/Assessment';
+import LocalPharmacyIcon from '@mui/icons-material/LocalPharmacy';
+import ExpandLess from '@mui/icons-material/ExpandLess';
+import ExpandMore from '@mui/icons-material/ExpandMore';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 
@@ -34,6 +38,7 @@ const drawerWidth = 240;
 
 const Layout = () => {
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [adminMenuOpen, setAdminMenuOpen] = React.useState(false);
   const navigate = useNavigate();
   const user = useSelector(selectUser);
   const role = useSelector(selectRole);
@@ -98,24 +103,49 @@ const Layout = () => {
             <ListItemText primary="Facilities" />
           </ListItemButton>
         </ListItem>
-        {role === 'admin' && (
+        {(role === 'admin' || role === 'facility_admin') && (
           <>
             <ListItem component="div">
-              <ListItemButton onClick={() => navigate('/admin/users')}>
+              <ListItemButton onClick={() => setAdminMenuOpen(!adminMenuOpen)}>
                 <ListItemIcon>
                   <AdminPanelSettingsIcon />
                 </ListItemIcon>
-                <ListItemText primary="User Management" />
+                <ListItemText primary="Administration" />
+                {adminMenuOpen ? <ExpandLess /> : <ExpandMore />}
               </ListItemButton>
             </ListItem>
-            <ListItem component="div">
-              <ListItemButton onClick={() => navigate('/audit')}>
-                <ListItemIcon>
-                  <AssessmentIcon />
-                </ListItemIcon>
-                <ListItemText primary="Audit Report" />
-              </ListItemButton>
-            </ListItem>
+            <Collapse in={adminMenuOpen} timeout="auto" unmountOnExit>
+              <List component="div" disablePadding>
+                {role === 'admin' && (
+                  <>
+                    <ListItem component="div">
+                      <ListItemButton onClick={() => navigate('/admin/users')} sx={{ pl: 4 }}>
+                        <ListItemIcon>
+                          <PersonIcon />
+                        </ListItemIcon>
+                        <ListItemText primary="User Management" />
+                      </ListItemButton>
+                    </ListItem>
+                    <ListItem component="div">
+                      <ListItemButton onClick={() => navigate('/audit')} sx={{ pl: 4 }}>
+                        <ListItemIcon>
+                          <AssessmentIcon />
+                        </ListItemIcon>
+                        <ListItemText primary="Audit Report" />
+                      </ListItemButton>
+                    </ListItem>
+                  </>
+                )}
+                <ListItem component="div">
+                  <ListItemButton onClick={() => navigate('/admin/pharmacies')} sx={{ pl: 4 }}>
+                    <ListItemIcon>
+                      <LocalPharmacyIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Pharmacy Management" />
+                  </ListItemButton>
+                </ListItem>
+              </List>
+            </Collapse>
           </>
         )}
         <ListItem component="div">

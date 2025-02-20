@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Places API Test</title>
+    <meta name="google-maps-key" content="%REACT_APP_GOOGLE_MAPS_API_KEY%" />
+    <script src="config.js"></meta>
+    <style>
+        #map { height: 300px; width: 100%; }
+        #results { margin-top: 20px; }
+        .pharmacy-item { 
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <h2>Pharmacy Search Test</h2>
+    <div>
+        <input type="text" id="search" placeholder="Enter pharmacy name..." style="padding: 5px; width: 200px;">
+        <button onclick="searchPharmacies()" style="padding: 5px 10px;">Search</button>
+    </div>
+    <div id="map"></div>
+    <div id="results"></div>
+
+    <script>
+        let map;
+        let service;
+        let markers = [];
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 40.7128, lng: -74.0060 },
+                zoom: 13
+            });
+            service = new google.maps.places.PlacesService(map);
+        }
+
+        function searchPharmacies() {
+            const searchText = document.getElementById('search').value;
+            
+            const request = {
+                query: `${searchText} pharmacy`,
+                type: ['pharmacy']
+            };
+
+            service.textSearch(request, (results, status) => {
+                if (status === google.maps.places.PlacesServiceStatus.OK) {
+                    console.log('Places API Response:', results);
+                    displayResults(results);
+                    
+                    // Clear existing markers
+                    markers.forEach(marker => marker.setMap(null));
+                    markers = [];
+                    
+                    // Add markers for each pharmacy
+                    results.forEach(place => {
+                        new google.maps.Marker({
+                            map: map,
+                            position: place.geometry.location,
+                            title: place.name
+                        });
+                    });
+
+                    // Center map on first result
+                    if (results.length > 0) {
+                        map.setCenter(results[0].geometry.location);
+                    }
+                } else {
+                    console.error('Places API Error:', status);
+                    document.getElementById('results').innerHTML = `Error: ${status}`;
+                }
+            });
+        }
+
+        function displayResults(places) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = places.map(place => `
+                <div class="pharmacy-item">
+                    <strong>${place.name}</strong><br>
+                    ${place.formatted_address}<br>
+                    Rating: ${place.rating || 'N/A'}
+                </div>
+            `).join('');
+        }
+    </script>
+    <script>
+        // Load Google Maps script dynamically after page load
+        window.addEventListener('load', () => {
+            const apiKey = document.querySelector('meta[name="google-maps-key"]')?.content || window.config?.GOOGLE_MAPS_API_KEY;
+            if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
+                document.getElementById('results').innerHTML = '<div class="error-message">Google Maps API key not found</div>';
+            } else {
+                const script = document.createElement('script');
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initMap`;
+                script.async = true;
+                script.defer = true;
+                script.onerror = () => document.getElementById('results').innerHTML = '<div class="error-message">Failed to load Google Maps script</div>';
+                document.head.appendChild(script);
+            }
+        });
+    </script>
+</body>
+</html>

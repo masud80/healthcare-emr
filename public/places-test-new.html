@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Places API Test (Simple Implementation)</title>
+    <script>
+        window.config = {
+            GOOGLE_MAPS_API_KEY: 'AIzaSyAFuCnJ0BUafpcsqvoOhyeL0ZJ3Six1T_Y'
+        };
+    </script>
+    <style>
+        #map { 
+            height: 300px; 
+            width: 100%; 
+        }
+        #results { 
+            margin-top: 20px; 
+        }
+        .pharmacy-item { 
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        .pharmacy-item:hover {
+            background-color: #f5f5f5;
+        }
+        .error-message {
+            color: red;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid red;
+            background-color: #fff0f0;
+        }
+        .info-window {
+            padding: 8px;
+            max-width: 300px;
+        }
+        .hours-list {
+            margin-top: 5px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <h2>Places API Test (Simple Implementation)</h2>
+    <div id="error-container"></div>
+    <div>
+        <input type="text" id="search" placeholder="Enter pharmacy name..." style="padding: 5px; width: 200px;">
+        <button onclick="searchPharmacies()" style="padding: 5px 10px;">Search</button>
+    </div>
+    <div id="map"></div>
+    <div id="results"></div>
+
+    <script>
+        let map;
+        let service;
+        let infowindow;
+        let markers = [];
+
+        function showError(message, error) {
+            const errorContainer = document.getElementById('error-container');
+            let errorMessage = `<div class="error-message">${message}`;
+            if (error) {
+                console.error('Detailed error:', error);
+                errorMessage += `<br>Details: ${error.message || error}`;
+            }
+            errorMessage += '</div>';
+            errorContainer.innerHTML = errorMessage;
+        }
+
+        function clearMarkers() {
+            markers.forEach(marker => marker.map = null);
+            markers = [];
+        }
+
+        async function initMap() {
+            try {
+                console.log('Initializing map...');
+                
+                // Load required libraries
+                const { Map } = await google.maps.importLibrary("maps");
+                const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+                
+                const manhattan = { lat: 40.7128, lng: -74.0060 };
+                
+                map = new google.maps.Map(document.getElementById('map'), {
+                    center: manhattan,
+                    zoom: 13,
+                    mapId: 'pharmacy-map'
+                });
+
+                infowindow = new google.maps.InfoWindow({
+                    maxWidth: 300
+                });
+                service = new google.maps.places.PlacesService(map);
+
+                // Add a marker for the center point
+                const centerMarker = new AdvancedMarkerElement({
+                    map,
+                    position: manhattan,
+                    title: 'Search Center'
+                });
+
+                console.log('Map and Places service initialized successfully');
+            } catch (error) {
+                showError('Failed to initialize map', error);
+            }
+        }
+
+        async function searchPharmacies() {
+            try {
+                const searchText = document.getElementById('search').value;
+                if (!searchText) {
+                    showError('Please enter a search term');
+                    return;
+                }
+
+                clearMarkers();
+                document.getElementById('results').innerHTML = '';
+                document.getElementById('error-container').innerHTML = '';
+
+                const findRequest = {
+                    query: `${searchText} pharmacy`,
+                    fields: ['name', 'geometry', 'formatted_address', 'place_id']
+                };
+
+                console.log('Search request:', findRequest);
+
+                service.findPlaceFromQuery(findRequest, async (places, status) => {
+                    if (status === google.maps.places.PlacesServiceStatus.OK && places) {
+                        console.log('Found places:', places);
+                        
+                        const bounds = new google.maps.LatLngBounds();
+                        const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+                        
+                        for (const place of places) {
+                            // Get detailed information for each place
+                            const detailRequest = {
+                                placeId: place.place_id,
+                                fields: [
+                                    'name',
+                                    'geometry',
+                                    'formatted_address',
+                                    'rating',
+                                    'opening_hours',
+                                    'formatted_phone_number',
+                                    'business_status'
+                                ]
+                            };
+
+                            service.getDetails(detailRequest, async (placeDetails, detailStatus) => {
+                                if (detailStatus === google.maps.places.PlacesServiceStatus.OK) {
+                                    // Create marker
+                                    const marker = new AdvancedMarkerElement({
+                                        map,
+                                        position: placeDetails.geometry.location,
+                                        title: placeDetails.name
+                                    });
+                                    
+                                    markers.push(marker);
+                                    bounds.extend(placeDetails.geometry.location);
+
+                                    // Add click listener to marker
+                                    marker.addListener('click', () => {
+                                        showInfoWindow(placeDetails, marker);
+                                    });
+
+                                    // Add result to list
+                                    addResultToList(placeDetails);
+
+                                    // Adjust map bounds
+                                    map.fitBounds(bounds);
+                                    if (markers.length === 1) {
+                                        map.setZoom(15);
+                                    }
+                                } else {
+                                    console.error('Error getting place details:', detailStatus);
+                                }
+                            });
+                        }
+                    } else {
+                        showError(`No pharmacies found for "${searchText}". Try a different search term.`);
+                    }
+                });
+            } catch (error) {
+                showError('Error during search', error);
+            }
+        }
+
+        function getBusinessStatus(place) {
+            if (!place.business_status) return '';
+            
+            switch (place.business_status) {
+                case 'OPERATIONAL':
+                    return '<span style="color: green;">Currently operating</span>';
+                case 'CLOSED_TEMPORARILY':
+                    return '<span style="color: orange;">Temporarily closed</span>';
+                case 'CLOSED_PERMANENTLY':
+                    return '<span style="color: red;">Permanently closed</span>';
+                default:
+                    return '';
+            }
+        }
+
+        function getOpeningHours(place) {
+            if (!place.opening_hours) return 'Hours not available';
+            
+            let hoursText = '';
+            if (place.opening_hours.weekday_text) {
+                hoursText = '<div class="hours-list">' + 
+                    place.opening_hours.weekday_text.join('<br>') + 
+                    '</div>';
+            }
+            
+            return hoursText;
+        }
+
+        function showInfoWindow(place, marker) {
+            const content = `
+                <div class="info-window">
+                    <strong>${place.name}</strong><br>
+                    ${place.formatted_address || ''}<br>
+                    ${place.formatted_phone_number ? `Phone: ${place.formatted_phone_number}<br>` : ''}
+                    ${place.rating ? `Rating: ${place.rating} / 5<br>` : ''}
+                    ${getBusinessStatus(place)}<br>
+                    ${getOpeningHours(place)}
+                </div>
+            `;
+            infowindow.setContent(content);
+            infowindow.open(map, marker);
+        }
+
+        function addResultToList(place) {
+            const resultsDiv = document.getElementById('results');
+            const placeDiv = document.createElement('div');
+            placeDiv.className = 'pharmacy-item';
+            placeDiv.innerHTML = `
+                <strong>${place.name}</strong><br>
+                ${place.formatted_address || ''}<br>
+                ${place.formatted_phone_number ? `Phone: ${place.formatted_phone_number}<br>` : ''}
+                ${place.rating ? `Rating: ${place.rating} / 5<br>` : ''}
+                ${getBusinessStatus(place)}
+                ${getOpeningHours(place)}
+            `;
+            
+            // Add click handler to center map on this result
+            placeDiv.addEventListener('click', () => {
+                map.setCenter(place.geometry.location);
+                map.setZoom(15);
+                
+                // Show info window for this place
+                showInfoWindow(place, markers.find(m => 
+                    m.position.lat() === place.geometry.location.lat() && 
+                    m.position.lng() === place.geometry.location.lng()
+                ));
+            });
+            
+            resultsDiv.appendChild(placeDiv);
+        }
+
+        // Add error handler for uncaught errors
+        window.onerror = function(msg, url, line, col, error) {
+            showError(`An error occurred: ${msg}`, error);
+            return false;
+        };
+    </script>
+    <script>
+        // Load Google Maps script dynamically after page load
+        window.addEventListener('load', () => {
+            const apiKey = document.querySelector('meta[name="google-maps-key"]')?.content || window.config?.GOOGLE_MAPS_API_KEY;
+            if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
+                showError('Google Maps API key not found');
+            } else {
+                const script = document.createElement('script');
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initMap`;
+                script.async = true;
+                script.defer = true;
+                script.onerror = () => showError('Failed to load Google Maps script');
+                document.head.appendChild(script);
+            }
+        });
+    </script>
+</body>
+</html>

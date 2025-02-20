@@ -81,6 +81,24 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Pharmacy collection rules
+    match /pharmacies/{pharmacyId} {
+      // Allow read if authenticated and is admin or facility admin
+      allow read: if request.auth != null && (
+        isAdmin() ||
+        isFacilityAdmin()
+      );
+
+      // Allow create/update if authenticated and is admin or facility admin
+      allow create, update: if request.auth != null && (
+        isAdmin() ||
+        isFacilityAdmin()
+      );
+
+      // No direct deletion allowed
+      allow delete: if false;
+    }
+
     // Default rule for other collections
     match /{document=**} {
       allow read, write: if request.auth != null;

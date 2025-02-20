@@ -8,6 +8,7 @@ import { fetchFacilities } from '../../redux/thunks/facilitiesThunks';
 import { fetchPatientPrescriptions } from '../../redux/slices/prescriptionsSlice';
 import PrescriptionForm from '../prescriptions/PrescriptionForm';
 import format from 'date-fns/format';
+import { Dialog, DialogTitle, DialogContent } from '@mui/material';
 import '../../styles/components.css';
 import '../../styles/prescriptions.css';
 
@@ -351,20 +352,21 @@ const PatientDetails = () => {
         </div>
       )}
 
-      {openPrescriptionDialog && (
-        <div className="dialog-overlay">
-          <div className="dialog dialog-large">
-            <h3 className="dialog-title">New Prescription</h3>
-            <div className="dialog-content">
-              <PrescriptionForm
-                patientId={id}
-                defaultPharmacy={selectedPatient.defaultPharmacy}
-                onClose={() => setOpenPrescriptionDialog(false)}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      <Dialog
+        open={openPrescriptionDialog}
+        onClose={() => setOpenPrescriptionDialog(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>New Prescription</DialogTitle>
+        <DialogContent>
+          <PrescriptionForm
+            patientId={id}
+            defaultPharmacy={selectedPatient.defaultPharmacy}
+            onClose={() => setOpenPrescriptionDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -20,6 +20,8 @@ import FacilityDetails from './components/facilities/FacilityDetails';
 import CreateFacility from './components/facilities/CreateFacility';
 import UserManagement from './components/admin/UserManagement';
 import PrivateRoute from './components/auth/PrivateRoute';
+import PharmacyList from './components/pharmacy/PharmacyList';
+import CreatePharmacy from './components/pharmacy/CreatePharmacy';
 import DatabaseInitializer from './components/utils/DatabaseInitializer';
 import MedicalRecords from './components/records/MedicalRecords';
 import AssignFacilityTest from './components/admin/AssignFacilityTest';
@@ -62,6 +64,11 @@ function App() {
                 <Route path="admin/assign-facility" element={<AssignFacilityTest />} />
                 <Route path="database-init" element={<DatabaseInitializer />} />
                 <Route path="audit" element={<AuditReport />} />
+              </Route>
+
+              {/* Admin and Facility Admin routes */}
+              <Route element={<PrivateRoute requireAdmin={true} requireFacilityAdmin={true} />}>
+                <Route path="admin/pharmacies" element={<PharmacyList />} />
               </Route>
             </Route>
           </Routes>

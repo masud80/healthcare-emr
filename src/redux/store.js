@@ -6,6 +6,7 @@ import visitsReducer from './slices/visitsSlice';
 import auditReducer from './slices/auditSlice';
 import appointmentsReducer from './slices/appointmentsSlice';
 import prescriptionsReducer from './slices/prescriptionsSlice';
+import pharmacyReducer from './slices/pharmacySlice';
 
 export const store = configureStore({
   reducer: {
@@ -15,7 +16,8 @@ export const store = configureStore({
     visits: visitsReducer,
     audit: auditReducer,
     appointments: appointmentsReducer,
-    prescriptions: prescriptionsReducer
+    prescriptions: prescriptionsReducer,
+    pharmacy: pharmacyReducer
   }
 });
 
