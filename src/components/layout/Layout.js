@@ -36,6 +36,35 @@ import { auth } from '../../firebase/config';
 
 const drawerWidth = 240;
 
+const drawerStyles = {
+  drawer: {
+    '& .MuiDrawer-paper': {
+      boxSizing: 'border-box',
+      width: drawerWidth,
+      backgroundColor: '#f8f9fa',
+      borderRight: '1px solid rgba(0, 0, 0, 0.12)'
+    }
+  },
+  listItem: {
+    '&:hover': {
+      backgroundColor: 'rgba(0, 0, 0, 0.04)'
+    }
+  },
+  listItemSelected: {
+    '&.Mui-selected': {
+      backgroundColor: 'rgba(25, 118, 210, 0.08)',
+      '&:hover': {
+        backgroundColor: 'rgba(25, 118, 210, 0.12)'
+      }
+    }
+  },
+  userInfo: {
+    padding: '16px',
+    borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
+    backgroundColor: '#fff'
+  }
+};
+
 const Layout = () => {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [adminMenuOpen, setAdminMenuOpen] = React.useState(false);
@@ -63,16 +92,27 @@ const Layout = () => {
   };
 
   const drawer = (
-    <div>
+    <Box>
+      {user && (
+        <Box sx={drawerStyles.userInfo}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+            {user.name}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {user.email}
+          </Typography>
+          <Typography variant="caption" sx={{ color: 'primary.main' }}>
+            {capitalizeRole(user.role)}
+          </Typography>
+        </Box>
+      )}
       <List>
-        {user && (
-          <ListItem>
-            <ListItemText primary={user.name} secondary={user.email} />
-            <ListItemText secondary={capitalizeRole(user.role)} />
-          </ListItem>
-        )}
         <ListItem component="div">
-          <ListItemButton onClick={() => navigate('/dashboard')}>
+          <ListItemButton 
+            onClick={() => navigate('/dashboard')}
+            sx={drawerStyles.listItem}
+            selected={window.location.pathname === '/dashboard'}
+          >
             <ListItemIcon>
               <DashboardIcon />
             </ListItemIcon>
@@ -80,7 +120,11 @@ const Layout = () => {
           </ListItemButton>
         </ListItem>
         <ListItem component="div">
-          <ListItemButton onClick={() => navigate('/patients')}>
+          <ListItemButton 
+            onClick={() => navigate('/patients')}
+            sx={drawerStyles.listItem}
+            selected={window.location.pathname === '/patients'}
+          >
             <ListItemIcon>
               <PeopleIcon />
             </ListItemIcon>
@@ -88,30 +132,45 @@ const Layout = () => {
           </ListItemButton>
         </ListItem>
         <ListItem component="div">
-          <ListItemButton onClick={() => navigate('/appointments')}>
+          <ListItemButton 
+            onClick={() => navigate('/appointments')}
+            sx={drawerStyles.listItem}
+            selected={window.location.pathname === '/appointments'}
+          >
             <ListItemIcon>
               <EventIcon />
             </ListItemIcon>
             <ListItemText primary="Appointments" />
           </ListItemButton>
         </ListItem>
-        <ListItem component="div">
-          <ListItemButton onClick={() => navigate('/facilities')}>
-            <ListItemIcon>
-              <BusinessIcon />
-            </ListItemIcon>
-            <ListItemText primary="Facilities" />
-          </ListItemButton>
-        </ListItem>
         {(role === 'admin' || role === 'facility_admin') && (
-          <>
+          <ListItem component="div">
+            <ListItemButton 
+              onClick={() => navigate('/facilities')}
+              sx={drawerStyles.listItem}
+              selected={window.location.pathname === '/facilities'}
+            >
+              <ListItemIcon>
+                <BusinessIcon />
+              </ListItemIcon>
+              <ListItemText primary="Facilities" />
+            </ListItemButton>
+          </ListItem>
+        )}
+        {(role === 'admin' || role === 'facility_admin') && (
+          <List component="div" disablePadding>
             <ListItem component="div">
-              <ListItemButton onClick={() => setAdminMenuOpen(!adminMenuOpen)}>
+              <ListItemButton 
+                onClick={() => setAdminMenuOpen(!adminMenuOpen)}
+                sx={drawerStyles.listItem}
+              >
                 <ListItemIcon>
                   <AdminPanelSettingsIcon />
                 </ListItemIcon>
-                <ListItemText primary="Administration" />
-                {adminMenuOpen ? <ExpandLess /> : <ExpandMore />}
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
+                  <ListItemText primary="Administration" />
+                  {adminMenuOpen ? <ExpandLess /> : <ExpandMore />}
+                </Box>
               </ListItemButton>
             </ListItem>
             <Collapse in={adminMenuOpen} timeout="auto" unmountOnExit>
@@ -136,28 +195,39 @@ const Layout = () => {
                     </ListItem>
                   </>
                 )}
-                <ListItem component="div">
-                  <ListItemButton onClick={() => navigate('/admin/pharmacies')} sx={{ pl: 4 }}>
-                    <ListItemIcon>
-                      <LocalPharmacyIcon />
-                    </ListItemIcon>
-                    <ListItemText primary="Pharmacy Management" />
-                  </ListItemButton>
-                </ListItem>
+<ListItem component="div">
+                      <ListItemButton onClick={() => navigate('/admin/billing')} sx={{ pl: 4 }}>
+    <ListItemIcon>
+      <AssessmentIcon /> {/* You can choose an appropriate icon */}
+    </ListItemIcon>
+    <ListItemText primary="Billing" />
+  </ListItemButton>
+</ListItem>
               </List>
             </Collapse>
-          </>
+          </List>
         )}
         <ListItem component="div">
-          <ListItemButton onClick={handleLogout}>
-            <ListItemIcon>
+          <ListItemButton 
+            onClick={handleLogout}
+            sx={{
+              ...drawerStyles.listItem,
+              marginTop: 2,
+              color: 'error.main',
+              '&:hover': {
+                backgroundColor: 'error.light',
+                color: 'error.contrastText'
+              }
+            }}
+          >
+            <ListItemIcon sx={{ color: 'inherit' }}>
               <LogoutIcon />
             </ListItemIcon>
             <ListItemText primary="Logout" />
           </ListItemButton>
         </ListItem>
       </List>
-    </div>
+    </Box>
   );
 
   return (
@@ -206,8 +276,8 @@ const Layout = () => {
             keepMounted: true,
           }}
           sx={{
-            display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            ...drawerStyles.drawer,
+            display: { xs: 'block', sm: 'none' }
           }}
         >
           {drawer}
@@ -215,8 +285,8 @@ const Layout = () => {
         <Drawer
           variant="permanent"
           sx={{
-            display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            ...drawerStyles.drawer,
+            display: { xs: 'none', sm: 'block' }
           }}
           open
         >

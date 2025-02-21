@@ -23,8 +23,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import format from 'date-fns/format';
 
-const VisitList = () => {
-  const { patientId } = useParams();
+const VisitList = ({ patientId }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { visits, loading, error } = useSelector(state => state.visits);

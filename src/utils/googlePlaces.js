@@ -52,26 +52,45 @@ export const searchPharmacies = async (searchText) => {
       document.body.appendChild(mapDiv);
     }
 
+    // Get user's current location
+    const userLocation = await new Promise((resolve, reject) => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            resolve({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            });
+          },
+          () => reject(new Error('Geolocation permission denied'))
+        );
+      } else {
+        reject(new Error('Geolocation is not supported by this browser.'));
+      }
+    });
+
     // Initialize map (required for Places API)
     const map = new window.google.maps.Map(mapDiv, {
-      center: { lat: 40.7128, lng: -74.0060 }, // Default to NYC
+      center: userLocation, // Use user's current location
       zoom: 8
     });
 
     const service = new window.google.maps.places.PlacesService(map);
     
-    // First get predictions using AutocompleteService
+    // Perform a nearby search for pharmacies
+    const request = {
+      location: map.getCenter(),
+      radius: 160934, // 100 miles in meters
+      types: ['pharmacy'], // Filter results to only include pharmacies
+      keyword: searchText // Use the search text without appending 'pharmacy'
+    };
+
     const predictions = await new Promise((resolve, reject) => {
-      const autocompleteService = new window.google.maps.places.AutocompleteService();
-      autocompleteService.getPlacePredictions({
-        input: `${searchText} pharmacy`,
-        types: ['establishment'],
-        componentRestrictions: { country: 'us' }
-      }, (results, status) => {
+      service.nearbySearch(request, (results, status) => {
         if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
           resolve(results);
         } else {
-          reject(new Error(`Place predictions failed: ${status}`));
+          reject(new Error(`Nearby search failed: ${status}`));
         }
       });
     });
@@ -86,7 +105,7 @@ export const searchPharmacies = async (searchText) => {
             address: details.formatted_address,
             phone: details.formatted_phone_number || '',
             location: details.geometry.location,
-            place_id: details.place_id,
+            place_id: prediction.place_id,
             rating: details.rating,
             businessStatus: formatBusinessStatus(details.business_status),
             openingHours: formatOpeningHours(details.opening_hours)

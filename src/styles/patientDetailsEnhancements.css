@@ -1,0 +1,69 @@
+/* Base container and layout adjustments */
+.container {
+  padding: 2rem;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: #f9f9f9; /* Light background for better contrast */
+}
+
+/* Divider for visual separation */
+.divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 1rem 0;
+}
+
+/* Button container for better alignment */
+.button-container {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end; /* Align buttons to the right */
+}
+
+/* Enhanced tab styles */
+.tab {
+  padding: 0.5rem 1rem;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  border-radius: 4px; /* Rounded corners for tabs */
+}
+
+.tab.active {
+  background-color: #1976d2; /* Active tab color */
+  color: white;
+}
+
+.tab:hover {
+  background-color: #e0e0e0; /* Hover effect for tabs */
+}
+
+/* Improved button styles */
+.button {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.button-primary {
+  background-color: #1976d2;
+  color: white;
+}
+
+.button-primary:hover {
+  background-color: #1565c0;
+}
+
+.button-secondary {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.button-secondary:hover {
+  background-color: #e0e0e0;
+}

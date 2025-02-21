@@ -4,6 +4,7 @@ import store from './redux/store';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import Layout from './components/layout/Layout';
+import BillingDashboard from './components/billing/BillingDashboard';
 import CreateVisit from './components/visits/CreateVisit';
 import VisitList from './components/visits/VisitList';
 import VisitDetails from './components/visits/VisitDetails';
@@ -69,6 +70,7 @@ function App() {
               {/* Admin and Facility Admin routes */}
               <Route element={<PrivateRoute requireAdmin={true} requireFacilityAdmin={true} />}>
                 <Route path="admin/pharmacies" element={<PharmacyList />} />
+                <Route path="admin/billing" element={<BillingDashboard />} />
               </Route>
             </Route>
           </Routes>

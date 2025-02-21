@@ -28,6 +28,7 @@ import {
 } from '../../utils/googlePlaces';
 
 const CreatePharmacy = ({ onClose, pharmacy }) => {
+  const [tempName, setTempName] = useState(''); // Temporary state for pharmacy name
   const dispatch = useDispatch();
   const { searchResults, searchStatus } = useSelector(state => state.pharmacy);
   const [formData, setFormData] = useState({
@@ -172,14 +173,18 @@ const CreatePharmacy = ({ onClose, pharmacy }) => {
     }
   }, [searchResults, handleSearchResultClick]);
 
-  const handleChange = (e) => {
+const handleChange = (e) => {
     const { name, value } = e.target;
-    
-    // Check for search trigger
-    if (name === 'name' && value.length >= 3) {
-      dispatch(searchPharmaciesOnline(value));
-    } else if (name === 'name' && value.length < 3) {
-      dispatch(clearSearchResults());
+
+    // Update temporary name instead of formData
+    if (name === 'name') {
+      setTempName(value);
+      if (value.length >= 3) {
+        dispatch(searchPharmaciesOnline(value));
+      } else {
+        dispatch(clearSearchResults());
+      }
+      return;
     }
 
     // Don't update address directly when using autocomplete
@@ -196,10 +201,11 @@ const CreatePharmacy = ({ onClose, pharmacy }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const dataToSave = { ...formData, name: tempName }; // Ensure tempName is used
       if (pharmacy) {
-        await dispatch(updatePharmacy({ id: pharmacy.id, data: formData })).unwrap();
+        await dispatch(updatePharmacy({ id: pharmacy.id, data: dataToSave })).unwrap();
       } else {
-        await dispatch(addPharmacy(formData)).unwrap();
+        await dispatch(addPharmacy(dataToSave)).unwrap();
       }
       onClose();
     } catch (error) {
@@ -367,3 +373,4 @@ const CreatePharmacy = ({ onClose, pharmacy }) => {
 };
 
 export default CreatePharmacy;
+

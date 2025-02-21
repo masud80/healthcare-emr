@@ -3,14 +3,19 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
+import VisitList from '../visits/VisitList';
 import { setSelectedPatient, fetchPatientDetails } from '../../redux/slices/patientsSlice';
 import { fetchFacilities } from '../../redux/thunks/facilitiesThunks';
 import { fetchPatientPrescriptions } from '../../redux/slices/prescriptionsSlice';
 import PrescriptionForm from '../prescriptions/PrescriptionForm';
 import format from 'date-fns/format';
-import { Dialog, DialogTitle, DialogContent } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, Button } from '@mui/material';
 import '../../styles/components.css';
 import '../../styles/prescriptions.css';
+import '../../styles/patientDetailsEnhancements.css';
+import '../../styles/patientCardStyles.css';
+import '../../styles/patientCardOutline.css';
+import '../../styles/tabs.css';
 
 const TabPanel = ({ children, value, index }) => (
   <div hidden={value !== index}>
@@ -113,20 +118,25 @@ const PatientDetails = () => {
   return (
     <div className="container">
       <div className="paper">
-        <div className="flex flex-between flex-center">
-          <div>
-            <h1 className="title">{selectedPatient.name}</h1>
-            <p className="subtitle">Patient ID: {selectedPatient.id}</p>
+        <div className="flex flex-between flex-center" style={{ marginBottom: '2rem' }}>
+          <div className="flex flex-center" style={{ gap: '1rem' }}>
+            <h1 className="title" style={{ margin: 0 }}>{selectedPatient.name}</h1>
+            <Button
+              variant="contained"
+              sx={{ 
+                backgroundColor: '#1a237e',
+                '&:hover': {
+                  backgroundColor: '#0d47a1'
+                }
+              }}
+              onClick={() => navigate(`/patients/${id}/visits/new`)}
+            >
+              New Visit
+            </Button>
           </div>
-          <button
-            className="button button-primary"
-            onClick={() => navigate(`/patients/${id}/visits/new`)}
-          >
-            New Visit
-          </button>
         </div>
 
-        <div className="tabs">
+        <div className="tabs" style={{ marginBottom: '2rem' }}>
           <button 
             className={`tab ${tabValue === 0 ? 'active' : ''}`}
             onClick={() => setTabValue(0)}
@@ -151,6 +161,12 @@ const PatientDetails = () => {
           >
             Prescriptions
           </button>
+          <button 
+            className={`tab ${tabValue === 4 ? 'active' : ''}`}
+            onClick={() => setTabValue(4)}
+          >
+            Visits
+          </button>
         </div>
 
         <TabPanel value={tabValue} index={0}>
@@ -164,18 +180,29 @@ const PatientDetails = () => {
                 <p>Email: {selectedPatient.email}</p>
                 <p>Address: {selectedPatient.address}</p>
                 <div className="facility-section">
-                  <div className="flex flex-between flex-center">
-                    <h3>Facility</h3>
-                    {(role === 'admin' || role === 'doctor') && !editingFacility && (
-                      <button
-                        className="button button-secondary"
-                        onClick={() => setEditingFacility(true)}
-                      >
-                        Change Facility
-                      </button>
-                    )}
-                  </div>
-                  {editingFacility ? (
+                  <h3>Facility</h3>
+                  {!editingFacility && (
+                    <div className="flex flex-between flex-center" style={{ marginTop: '0.5rem' }}>
+                      <p style={{ margin: 0 }}>
+                        {facilities.find(f => f.id === selectedPatient.facilityId)?.name || 'Not Assigned'}
+                      </p>
+                      {(role === 'admin' || role === 'doctor') && (
+                        <Button
+                          variant="contained"
+                          sx={{ 
+                            backgroundColor: '#1a237e',
+                            '&:hover': {
+                              backgroundColor: '#0d47a1'
+                            }
+                          }}
+                          onClick={() => setEditingFacility(true)}
+                        >
+                          Transfer to Another Facility
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                  {editingFacility && (
                     <div>
                       <select
                         className="select"
@@ -190,24 +217,27 @@ const PatientDetails = () => {
                         ))}
                       </select>
                       <div className="dialog-actions">
-                        <button
-                          className="button button-secondary"
+                        <Button
+                          variant="outlined"
                           onClick={() => setEditingFacility(false)}
+                          sx={{ mr: 1 }}
                         >
                           Cancel
-                        </button>
-                        <button
-                          className="button button-primary"
+                        </Button>
+                        <Button
+                          variant="contained"
                           onClick={handleUpdateFacility}
+                          sx={{ 
+                            backgroundColor: '#1a237e',
+                            '&:hover': {
+                              backgroundColor: '#0d47a1'
+                            }
+                          }}
                         >
                           Update
-                        </button>
+                        </Button>
                       </div>
                     </div>
-                  ) : (
-                    <p>
-                      {facilities.find(f => f.id === selectedPatient.facilityId)?.name || 'Not Assigned'}
-                    </p>
                   )}
                 </div>
               </div>
@@ -230,58 +260,50 @@ const PatientDetails = () => {
             <p>Allergies: {selectedPatient.allergies?.join(', ') || 'None'}</p>
             <p>Chronic Conditions: {selectedPatient.chronicConditions?.join(', ') || 'None'}</p>
           </div>
-          
-          <div>
-            <div className="flex flex-between flex-center">
-              <h2 className="subtitle">Visits</h2>
-              <button
-                className="button button-secondary"
-                onClick={() => navigate(`/patients/${id}/visits`)}
-              >
-                View All Visits
-              </button>
-            </div>
-            <ul className="list">
-              {selectedPatient.visits?.map((visit, index) => (
-                <li key={index} className="list-item">
-                  <strong>{format(new Date(visit.date), 'MM/dd/yyyy')}</strong>
-                  <p>{visit.reason}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
         </TabPanel>
 
         <TabPanel value={tabValue} index={2}>
-          <div className="flex flex-between flex-center">
-            <h2 className="subtitle">Clinical Notes</h2>
-            <button
-              className="button button-primary"
+          <div className="flex flex-center" style={{ gap: '1rem', marginBottom: '2rem' }}>
+            <h2 className="subtitle" style={{ margin: 0 }}>Clinical Notes</h2>
+            <Button
+              variant="contained"
+              sx={{ 
+                backgroundColor: '#1a237e',
+                '&:hover': {
+                  backgroundColor: '#0d47a1'
+                }
+              }}
               onClick={() => setOpenNoteDialog(true)}
             >
               Add Note
-            </button>
+            </Button>
           </div>
-          <ul className="list">
+          <div className="paper">
             {selectedPatient.notes?.map((note, index) => (
-              <li key={index} className="list-item">
+              <div key={index} className="list-item">
                 <p>{note.content}</p>
                 <small>{note.author} - {new Date(note.timestamp).toLocaleString()}</small>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         </TabPanel>
 
         <TabPanel value={tabValue} index={3}>
           <div className="flex flex-between flex-center">
             <h2 className="subtitle">Prescriptions</h2>
             {(role === 'doctor' || role === 'nurse') && (
-              <button
-                className="button button-primary"
+              <Button
+                variant="contained"
+                sx={{ 
+                  backgroundColor: '#1a237e',
+                  '&:hover': {
+                    backgroundColor: '#0d47a1'
+                  }
+                }}
                 onClick={() => setOpenPrescriptionDialog(true)}
               >
                 New Prescription
-              </button>
+              </Button>
             )}
           </div>
           <div className="paper">
@@ -320,6 +342,10 @@ const PatientDetails = () => {
             ))}
           </div>
         </TabPanel>
+
+        <TabPanel value={tabValue} index={4}>
+          <VisitList patientId={id} />
+        </TabPanel>
       </div>
 
       {openNoteDialog && (
@@ -335,18 +361,25 @@ const PatientDetails = () => {
               />
             </div>
             <div className="dialog-actions">
-              <button 
-                className="button button-secondary"
+              <Button
+                variant="outlined"
                 onClick={() => setOpenNoteDialog(false)}
+                sx={{ mr: 1 }}
               >
                 Cancel
-              </button>
-              <button 
-                className="button button-primary"
+              </Button>
+              <Button
+                variant="contained"
                 onClick={handleAddNote}
+                sx={{ 
+                  backgroundColor: '#1a237e',
+                  '&:hover': {
+                    backgroundColor: '#0d47a1'
+                  }
+                }}
               >
                 Add
-              </button>
+              </Button>
             </div>
           </div>
         </div>

@@ -4,6 +4,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { fetchUserFacilities } from '../../redux/thunks/facilitiesThunks';
+import { DataGrid } from '@mui/x-data-grid';
+import { Button, Paper, TextField, Box, Typography, CircularProgress } from '@mui/material';
 import '../../styles/components.css';
 
 const PatientList = () => {
@@ -29,14 +31,12 @@ const PatientList = () => {
         let patientsQuery;
         
         if (role === 'admin') {
-          // Admin can see all patients
           console.log('Admin user - fetching all patients');
           patientsQuery = query(
             collection(db, 'patients'),
             orderBy('name', 'asc')
           );
         } else {
-          // Non-admin users can only see patients from their facilities
           if (!userFacilities || userFacilities.length === 0) {
             console.log('No facilities assigned');
             setPatients([]);
@@ -66,10 +66,10 @@ const PatientList = () => {
           return {
             id: doc.id,
             name: data.name || 'Unknown',
-            dateOfBirth: data.dateOfBirth || null,
-            contact: data.contact || '',
-            email: data.email || '',
-            bloodType: data.bloodType || '',
+            dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth).toLocaleDateString() : 'N/A',
+            contact: data.contact || 'N/A',
+            email: data.email || 'N/A',
+            bloodType: data.bloodType || 'N/A',
             facilityId: data.facilityId || ''
           };
         });
@@ -87,6 +87,31 @@ const PatientList = () => {
     fetchPatients();
   }, [userFacilities, role]);
 
+  const columns = [
+    { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
+    { field: 'dateOfBirth', headerName: 'Date of Birth', flex: 1, minWidth: 120 },
+    { field: 'contact', headerName: 'Contact', flex: 1, minWidth: 120 },
+    { field: 'email', headerName: 'Email', flex: 1, minWidth: 200 },
+    { field: 'bloodType', headerName: 'Blood Type', flex: 0.5, minWidth: 100 },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      flex: 1,
+      minWidth: 120,
+      sortable: false,
+      renderCell: (params) => (
+        <Button
+          variant="contained"
+          color="primary"
+          size="small"
+          onClick={() => navigate(`/patients/${params.row.id}`)}
+        >
+          View Details
+        </Button>
+      ),
+    },
+  ];
+
   const filteredPatients = patients.filter(patient =>
     patient.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.email?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -94,108 +119,104 @@ const PatientList = () => {
 
   if (loading) {
     return (
-      <div className="container">
-        <div className="loading-spinner">
-          <p>Loading patients...</p>
-        </div>
-      </div>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+        <CircularProgress />
+      </Box>
     );
   }
 
   if (error) {
     return (
-      <div className="container">
-        <div className="error-message">
-          <p>Error: {error}</p>
-          <button 
-            className="button button-secondary"
-            onClick={() => window.location.reload()}
-          >
-            Retry
-          </button>
-        </div>
-      </div>
+      <Box p={3}>
+        <Typography color="error" gutterBottom>
+          Error: {error}
+        </Typography>
+        <Button 
+          variant="contained"
+          color="primary"
+          onClick={() => window.location.reload()}
+        >
+          Retry
+        </Button>
+      </Box>
     );
   }
 
   return (
-    <div className="container">
-      <div className="flex flex-between flex-center">
-        <h1 className="title">Patients</h1>
+    <Box p={3}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" component="h1">
+          Patients
+        </Typography>
         {(role === 'admin' || role === 'doctor') && (
-          <button
-            className="button button-primary"
+          <Button
+            variant="contained"
+            color="primary"
             onClick={() => navigate('/patients/new')}
           >
             + Add Patient
-          </button>
+          </Button>
         )}
-      </div>
+      </Box>
 
-      <div className="paper">
-        <div className="form-control">
-          <input
-            type="text"
+      <Paper elevation={3} sx={{ p: 3 }}>
+        <Box mb={3}>
+          <TextField
+            fullWidth
+            variant="outlined"
             placeholder="Search patients..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="input"
           />
-        </div>
+        </Box>
 
         {(role !== 'admin' && userFacilities.length === 0) ? (
-          <div className="text-center">
-            <p>No facilities assigned. Please contact an administrator.</p>
-          </div>
+          <Typography align="center">
+            No facilities assigned. Please contact an administrator.
+          </Typography>
         ) : filteredPatients.length === 0 ? (
-          <div className="text-center">
-            <p>{role === 'admin' ? 'No patients found in the system' : 'No patients found in your assigned facilities'}</p>
+          <Box textAlign="center">
+            <Typography gutterBottom>
+              {role === 'admin' ? 'No patients found in the system' : 'No patients found in your assigned facilities'}
+            </Typography>
             {searchTerm && (
-              <button
-                className="button button-secondary"
+              <Button
+                variant="outlined"
+                color="primary"
                 onClick={() => setSearchTerm('')}
               >
                 Clear Search
-              </button>
+              </Button>
             )}
-          </div>
+          </Box>
         ) : (
-          <div className="table-container">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Date of Birth</th>
-                  <th>Contact</th>
-                  <th>Email</th>
-                  <th>Blood Type</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredPatients.map((patient) => (
-                  <tr key={patient.id}>
-                    <td>{patient.name}</td>
-                    <td>{patient.dateOfBirth ? new Date(patient.dateOfBirth).toLocaleDateString() : 'N/A'}</td>
-                    <td>{patient.contact || 'N/A'}</td>
-                    <td>{patient.email || 'N/A'}</td>
-                    <td>{patient.bloodType || 'N/A'}</td>
-                    <td>
-                      <button
-                        className="button button-secondary"
-                        onClick={() => navigate(`/patients/${patient.id}`)}
-                      >
-                        View Details
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataGrid
+            rows={filteredPatients}
+            columns={columns}
+            autoHeight
+            initialState={{
+              pagination: {
+                paginationModel: { pageSize: 10, page: 0 },
+              },
+            }}
+            pageSizeOptions={[10, 25, 50]}
+            disableRowSelectionOnClick
+            sx={{
+              '& .MuiDataGrid-cell': {
+                fontSize: '0.875rem',
+              },
+              '& .MuiDataGrid-columnHeaders': {
+                backgroundColor: '#f5f5f5',
+                fontWeight: 'bold',
+              },
+              '& .MuiDataGrid-row:hover': {
+                backgroundColor: '#f8f8f8',
+              },
+            }}
+          />
         )}
-      </div>
-    </div>
+      </Paper>
+    </Box>
   );
 };
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App';
@@ -8,11 +8,10 @@ import { auth, db } from './firebase/config';
 import store from './redux/store';
 import { setUser, setLoading } from './redux/slices/authSlice';
 
-const container = document.getElementById('root');
-const root = createRoot(container);
+const container = document.getElementById('root'); 
 
 // Initialize loading state
-store.dispatch(setLoading(true));
+store.dispatch(setLoading(true)); 
 
 // Set up authentication listener
 onAuthStateChanged(auth, async (user) => {
@@ -42,6 +41,8 @@ onAuthStateChanged(auth, async (user) => {
     store.dispatch(setLoading(false));
   }
 });
+
+const root = createRoot(container);
 
 root.render(
   <React.StrictMode>

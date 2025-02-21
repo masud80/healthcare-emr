@@ -9,6 +9,9 @@ const PrivateRoute = ({ requireAdmin, requireFacilityAdmin }) => {
   const role = useSelector(selectRole);
   const loading = useSelector(selectLoading);
   const navigate = useNavigate();
+  
+  console.log('Current User:', user);
+  console.log('User Role:', role);
 
   useEffect(() => {
     // Check if auth is initialized

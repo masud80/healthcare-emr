@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { createAppointment } from '../../redux/slices/appointmentsSlice';
 import { fetchPatients } from '../../redux/slices/patientsSlice';
+import { fetchUserFacilities } from '../../redux/thunks/facilitiesThunks';
 import { 
   TextField, 
   Button, 
@@ -23,6 +24,7 @@ const CreateAppointment = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const patients = useSelector(state => state.patients.patients);
+  const { userFacilities } = useSelector(state => state.facilities);
   const loading = useSelector(state => state.appointments.loading);
   const patientsLoading = useSelector(state => state.patients.loading);
   const patientsError = useSelector(state => state.patients.error);
@@ -30,6 +32,7 @@ const CreateAppointment = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    dispatch(fetchUserFacilities());
     dispatch(fetchPatients())
       .unwrap()
       .catch(error => {
@@ -40,6 +43,7 @@ const CreateAppointment = () => {
 
   const [formData, setFormData] = useState({
     patientId: '',
+    facilityId: '',
     date: new Date(),
     purpose: '',
     status: 'scheduled',
@@ -63,11 +67,18 @@ const CreateAppointment = () => {
     setError('');
 
     try {
+      if (!formData.facilityId) {
+        setError('Please select a facility');
+        return;
+      }
+
       const selectedPatient = patients.find(p => p.id === formData.patientId);
-      
+      const selectedFacility = userFacilities.find(f => f.id === formData.facilityId);
+
       const appointmentData = {
         ...formData,
         patientName: selectedPatient.name,
+        facilityName: selectedFacility.name,
         date: formData.date.toISOString()
       };
 
@@ -98,6 +109,25 @@ const CreateAppointment = () => {
         )}
 
         <form onSubmit={handleSubmit}>
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel id="facility-select-label">Facility</InputLabel>
+            <Select
+              labelId="facility-select-label"
+              id="facility-select"
+              name="facilityId"
+              value={formData.facilityId}
+              onChange={handleInputChange}
+              required
+              label="Facility"
+            >
+              {userFacilities.map((facility) => (
+                <MenuItem key={facility.id} value={facility.id}>
+                  {facility.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
           <FormControl fullWidth sx={{ mb: 2 }}>
             <InputLabel id="patient-select-label">Patient</InputLabel>
             <Select

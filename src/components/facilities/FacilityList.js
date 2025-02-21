@@ -103,7 +103,7 @@ const FacilityList = () => {
       <Grid container spacing={3}>
         {filteredFacilities.map(facility => (
           <Grid item xs={12} sm={6} md={4} key={facility.id}>
-            <Card>
+            <Card sx={{ border: '2px solid #333' }}>
               <CardContent>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <Typography variant="h6" component="div">
