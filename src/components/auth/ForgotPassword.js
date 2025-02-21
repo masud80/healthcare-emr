@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { auth } from '../../firebase/config';
 import { sendPasswordResetEmail } from 'firebase/auth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { TextField, Button, Typography, Container, Box } from '@mui/material';
 
 const ForgotPassword = () => {
@@ -67,6 +67,17 @@ const ForgotPassword = () => {
           >
             Reset Password
           </Button>
+          <Box sx={{ textAlign: 'center', mt: 2 }}>
+            <Link 
+              to="/login"
+              style={{ 
+                textDecoration: 'none', 
+                color: '#1976d2'
+              }}
+            >
+              Back to Login
+            </Link>
+          </Box>
         </Box>
       </Box>
     </Container>

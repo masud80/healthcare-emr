@@ -18,10 +18,12 @@ import {
   IconButton,
   TextField,
   InputAdornment,
+  Checkbox,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import format from 'date-fns/format';
+import { jsPDF } from 'jspdf';
 
 const VisitList = ({ patientId }) => {
   const navigate = useNavigate();
@@ -32,6 +34,7 @@ const VisitList = ({ patientId }) => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedVisits, setSelectedVisits] = useState([]);
 
   useEffect(() => {
     if (user) {
@@ -46,6 +49,46 @@ const VisitList = ({ patientId }) => {
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
+  };
+
+  const handleSelectVisit = (visitId) => {
+    setSelectedVisits((prevSelected) => 
+      prevSelected.includes(visitId) 
+        ? prevSelected.filter(id => id !== visitId) 
+        : [...prevSelected, visitId]
+    );
+  };
+
+  const handleExportSelectedRows = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let yPos = 20;
+
+    // Add header
+    doc.setFontSize(20);
+    doc.text('Patient Visit Data', pageWidth / 2, yPos, { align: 'center' });
+    
+    // Add visit details
+    yPos += 20;
+    doc.setFontSize(12);
+    selectedVisits.forEach(visitId => {
+      const visit = visits.find(v => v.id === visitId);
+      if (visit) {
+        doc.text(`Visit ID: ${visit.id}`, 20, yPos);
+        yPos += 10;
+        doc.text(`Date: ${format(new Date(visit.createdAt), 'MMM dd, yyyy')}`, 20, yPos);
+        yPos += 10;
+        doc.text(`Symptoms: ${visit.symptoms.join(', ')}`, 20, yPos);
+        yPos += 10;
+        doc.text(`Notes: ${visit.notes.consultationNotes}`, 20, yPos);
+        yPos += 10;
+        doc.text(`Action Plan: ${visit.actionPlan}`, 20, yPos);
+        yPos += 20; // Add space between visits
+      }
+    });
+
+    // Save the PDF
+    doc.save('patient_visit_data.pdf');
   };
 
   const filteredVisits = visits.filter(visit => {
@@ -120,13 +163,6 @@ const VisitList = ({ patientId }) => {
     <Box sx={{ maxWidth: 1200, margin: '0 auto', p: 2 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h4">Patient Visits</Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => navigate(`/patients/${patientId}/visits/new`)}
-        >
-          New Visit
-        </Button>
       </Box>
 
       <Paper sx={{ mb: 2 }}>
@@ -151,6 +187,7 @@ const VisitList = ({ patientId }) => {
           <Table>
             <TableHead>
               <TableRow>
+                <TableCell padding="checkbox"></TableCell>
                 <TableCell>Date</TableCell>
                 <TableCell>Vitals</TableCell>
                 <TableCell>Symptoms</TableCell>
@@ -162,6 +199,12 @@ const VisitList = ({ patientId }) => {
             <TableBody>
               {paginatedVisits.map((visit) => (
                 <TableRow key={visit.id}>
+                  <TableCell padding="checkbox">
+                    <Checkbox
+                      checked={selectedVisits.includes(visit.id)}
+                      onChange={() => handleSelectVisit(visit.id)}
+                    />
+                  </TableCell>
                   <TableCell>
                     {format(new Date(visit.createdAt), 'MMM dd, yyyy')}
                   </TableCell>
@@ -208,6 +251,14 @@ const VisitList = ({ patientId }) => {
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </Paper>
+
+      <Button
+        variant="contained"
+        color="secondary"
+        onClick={handleExportSelectedRows}
+      >
+        Export Selected Rows
+      </Button>
     </Box>
   );
 };

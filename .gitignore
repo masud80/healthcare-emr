@@ -1,5 +1,6 @@
 # dependencies
 /node_modules
+PatientPortal/node_modules
 /.pnp
 .pnp.js
 
@@ -34,3 +35,4 @@ serviceAccountKey.json
 .vscode/
 *.swp
 *.swo
+PatientPortal/node_modules/*

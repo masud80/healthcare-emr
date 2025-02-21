@@ -2,6 +2,22 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { doc, updateDoc } from 'firebase/firestore';
+import { 
+  Box, 
+  Typography, 
+  Paper, 
+  Grid, 
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip,
+  OutlinedInput
+} from '@mui/material';
 import { db } from '../../firebase/config';
 import VisitList from '../visits/VisitList';
 import { setSelectedPatient, fetchPatientDetails } from '../../redux/slices/patientsSlice';
@@ -9,7 +25,6 @@ import { fetchFacilities } from '../../redux/thunks/facilitiesThunks';
 import { fetchPatientPrescriptions } from '../../redux/slices/prescriptionsSlice';
 import PrescriptionForm from '../prescriptions/PrescriptionForm';
 import format from 'date-fns/format';
-import { Dialog, DialogTitle, DialogContent, Button } from '@mui/material';
 import '../../styles/components.css';
 import '../../styles/prescriptions.css';
 import '../../styles/patientDetailsEnhancements.css';
@@ -35,7 +50,44 @@ const PatientDetails = () => {
   const [tabValue, setTabValue] = useState(0);
   const [openNoteDialog, setOpenNoteDialog] = useState(false);
   const [openPrescriptionDialog, setOpenPrescriptionDialog] = useState(false);
+  const [openMedicalHistoryModal, setOpenMedicalHistoryModal] = useState(false);
   const [newNote, setNewNote] = useState('');
+  const [medicalHistory, setMedicalHistory] = useState({
+    bloodType: '',
+    allergies: [],
+    chronicConditions: []
+  });
+
+  useEffect(() => {
+    if (selectedPatient) {
+      setMedicalHistory({
+        bloodType: selectedPatient.bloodType || '',
+        allergies: selectedPatient.allergies || [],
+        chronicConditions: selectedPatient.chronicConditions || []
+      });
+    }
+  }, [selectedPatient]);
+
+  const handleMedicalHistoryChange = (event) => {
+    const { name, value } = event.target;
+    setMedicalHistory(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleUpdateMedicalHistory = async () => {
+    try {
+      await updateDoc(doc(db, 'patients', id), medicalHistory);
+      dispatch(setSelectedPatient({
+        ...selectedPatient,
+        ...medicalHistory
+      }));
+      setOpenMedicalHistoryModal(false);
+    } catch (error) {
+      console.error('Error updating medical history:', error);
+    }
+  };
 const [editingFacility, setEditingFacility] = useState(false);
 const [selectedFacilityId, setSelectedFacilityId] = useState('');
 const [editingBasicInfo, setEditingBasicInfo] = useState(false);
@@ -156,14 +208,12 @@ const [editedEmergencyContact, setEditedEmergencyContact] = useState({});
             <h1 className="title" style={{ margin: 0 }}>{selectedPatient.name}</h1>
             <Button
               variant="contained"
-                  sx={{ 
-                    backgroundColor: '#1a237e',
-                    padding: '4px 16px',
-                    minWidth: '100px',
-                    '&:hover': {
-                      backgroundColor: '#0d47a1'
-                    }
-                  }}
+              sx={{ 
+                backgroundColor: '#1a237e',
+                '&:hover': {
+                  backgroundColor: '#0d47a1'
+                }
+              }}
               onClick={() => navigate(`/patients/${id}/visits/new`)}
             >
               New Visit
@@ -523,7 +573,22 @@ const [editedEmergencyContact, setEditedEmergencyContact] = useState({});
         </TabPanel>
 
         <TabPanel value={tabValue} index={1}>
-          <h2 className="subtitle">Medical History</h2>
+          <div className="flex flex-between flex-center" style={{ marginBottom: '1rem' }}>
+            <h2 className="subtitle">Medical History</h2>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => setOpenMedicalHistoryModal(true)}
+              sx={{ 
+                backgroundColor: '#1a237e',
+                '&:hover': {
+                  backgroundColor: '#0d47a1'
+                }
+              }}
+            >
+              Update Medical History
+            </Button>
+          </div>
           <div className="paper">
             <p>Blood Type: {selectedPatient.bloodType}</p>
             <p>Allergies: {selectedPatient.allergies?.join(', ') || 'None'}</p>
@@ -677,6 +742,87 @@ const [editedEmergencyContact, setEditedEmergencyContact] = useState({});
             defaultPharmacy={selectedPatient.defaultPharmacy}
             onClose={() => setOpenPrescriptionDialog(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={openMedicalHistoryModal}
+        onClose={() => setOpenMedicalHistoryModal(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Update Medical History</DialogTitle>
+        <DialogContent>
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Blood Type</InputLabel>
+            <Select
+              name="bloodType"
+              value={medicalHistory.bloodType}
+              onChange={handleMedicalHistoryChange}
+              label="Blood Type"
+            >
+              {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((type) => (
+                <MenuItem key={type} value={type}>{type}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Allergies</InputLabel>
+            <Select
+              multiple
+              name="allergies"
+              value={medicalHistory.allergies}
+              onChange={handleMedicalHistoryChange}
+              input={<OutlinedInput label="Allergies" />}
+              renderValue={(selected) => (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {selected.map((value) => (
+                    <Chip key={value} label={value} />
+                  ))}
+                </Box>
+              )}
+            >
+              {['Penicillin', 'Peanuts', 'Latex', 'Dairy', 'Eggs', 'Shellfish'].map((allergy) => (
+                <MenuItem key={allergy} value={allergy}>
+                  {allergy}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Chronic Conditions</InputLabel>
+            <Select
+              multiple
+              name="chronicConditions"
+              value={medicalHistory.chronicConditions}
+              onChange={handleMedicalHistoryChange}
+              input={<OutlinedInput label="Chronic Conditions" />}
+              renderValue={(selected) => (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {selected.map((value) => (
+                    <Chip key={value} label={value} />
+                  ))}
+                </Box>
+              )}
+            >
+              {['Diabetes', 'Hypertension', 'Asthma', 'Heart Disease', 'Arthritis'].map((condition) => (
+                <MenuItem key={condition} value={condition}>
+                  {condition}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+            <Button onClick={() => setOpenMedicalHistoryModal(false)} variant="outlined">
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateMedicalHistory} variant="contained" color="primary">
+              Save Changes
+            </Button>
+          </Box>
         </DialogContent>
       </Dialog>
     </div>
