@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import { jsPDF } from 'jspdf';
 import {
   Container,
   Paper,
@@ -29,7 +30,11 @@ import {
   Email as EmailIcon
 } from '@mui/icons-material';
 import { format } from 'date-fns';
-import { fetchBillById, processPayment } from '../../redux/thunks/billingThunks';
+import { 
+  fetchBillById, 
+  processPayment,
+  emailBill
+} from '../../redux/thunks/billingThunks';
 
 const BillDetails = () => {
   const { billId } = useParams();
@@ -46,16 +51,79 @@ const BillDetails = () => {
     dispatch(fetchBillById(billId));
   }, [dispatch, billId]);
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'paid':
-        return 'success';
-      case 'partial':
-        return 'warning';
-      case 'pending':
-        return 'error';
-      default:
-        return 'default';
+  const handleEmailBill = async () => {
+    try {
+      await dispatch(emailBill(billId));
+    } catch (error) {
+      console.error('Error emailing bill:', error);
+    }
+  };
+
+  const handlePrintBill = async () => {
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      let yPos = 20;
+
+      // Add header
+      doc.setFontSize(20);
+      doc.text('Healthcare EMR Bill', pageWidth / 2, yPos, { align: 'center' });
+      
+      // Add bill details
+      yPos += 20;
+      doc.setFontSize(12);
+      doc.text(`Bill Number: ${currentBill.billNumber}`, 20, yPos);
+      yPos += 10;
+      doc.text(`Date: ${currentBill.createdAt ? format(new Date(currentBill.createdAt), 'MMM dd, yyyy') : 'N/A'}`, 20, yPos);
+      yPos += 10;
+      doc.text(`Patient: ${currentBill.patientName}`, 20, yPos);
+      yPos += 10;
+      doc.text(`Patient ID: ${currentBill.patientId}`, 20, yPos);
+      
+      // Add items table
+      yPos += 20;
+      doc.text('Items:', 20, yPos);
+      yPos += 10;
+      
+      // Table headers
+      const columns = ['Description', 'Qty', 'Unit Price', 'Amount'];
+      let startX = 20;
+      columns.forEach(column => {
+        doc.text(column, startX, yPos);
+        startX += 45;
+      });
+      
+      // Table rows
+      yPos += 10;
+      currentBill.items.forEach(item => {
+        startX = 20;
+        doc.text(item.description, startX, yPos);
+        startX += 45;
+        doc.text(item.quantity.toString(), startX, yPos);
+        startX += 45;
+        doc.text(`$${item.unitPrice.toFixed(2)}`, startX, yPos);
+        startX += 45;
+        doc.text(`$${item.amount.toFixed(2)}`, startX, yPos);
+        yPos += 10;
+      });
+      
+      // Add totals
+      yPos += 10;
+      doc.text(`Subtotal: $${currentBill.subtotal.toFixed(2)}`, pageWidth - 60, yPos);
+      yPos += 10;
+      doc.text(`Tax: $${currentBill.tax.toFixed(2)}`, pageWidth - 60, yPos);
+      yPos += 10;
+      doc.text(`Total Amount: $${currentBill.totalAmount.toFixed(2)}`, pageWidth - 60, yPos);
+      yPos += 10;
+      doc.text(`Amount Paid: $${(currentBill.paidAmount || 0).toFixed(2)}`, pageWidth - 60, yPos);
+      yPos += 10;
+      const remainingAmount = (currentBill.totalAmount || 0) - (currentBill.paidAmount || 0);
+      doc.text(`Remaining Balance: $${remainingAmount.toFixed(2)}`, pageWidth - 60, yPos);
+      
+      // Save the PDF
+      doc.save(`bill-${currentBill.billNumber}.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
     }
   };
 
@@ -71,7 +139,7 @@ const BillDetails = () => {
       return;
     }
 
-    const remainingAmount = currentBill.totalAmount - (currentBill.paidAmount || 0);
+    const remainingAmount = (currentBill.totalAmount || 0) - (currentBill.paidAmount || 0);
     if (amount > remainingAmount) {
       setPaymentError('Payment amount cannot exceed the remaining balance');
       return;
@@ -114,7 +182,7 @@ const BillDetails = () => {
     );
   }
 
-  const remainingAmount = currentBill.totalAmount - (currentBill.paidAmount || 0);
+  const remainingAmount = (currentBill.totalAmount || 0) - (currentBill.paidAmount || 0);
 
   return (
     <Container maxWidth="lg">
@@ -124,7 +192,7 @@ const BillDetails = () => {
           <Grid item>
             <Typography variant="h5">Bill Details</Typography>
             <Typography color="textSecondary">
-              #{currentBill.billNumber}
+              #{currentBill.billNumber || ''}
             </Typography>
           </Grid>
           <Grid item>
@@ -132,16 +200,20 @@ const BillDetails = () => {
               <Button
                 startIcon={<EmailIcon />}
                 variant="outlined"
+                onClick={handleEmailBill}
+                disabled={loading}
               >
                 Email Bill
               </Button>
               <Button
                 startIcon={<PrintIcon />}
                 variant="outlined"
+                onClick={handlePrintBill}
+                disabled={loading}
               >
                 Print Bill
               </Button>
-              {currentBill.status !== 'paid' && (
+              {(currentBill.status || 'pending') !== 'paid' && (
                 <Button
                   startIcon={<PaymentIcon />}
                   variant="contained"
@@ -155,158 +227,65 @@ const BillDetails = () => {
         </Grid>
 
         {/* Bill Information */}
-        <Grid container spacing={3} mb={3}>
+        <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
-            <Typography variant="subtitle2">Bill To:</Typography>
-            <Typography>{currentBill.patientName}</Typography>
-            <Typography color="textSecondary">
-              Patient ID: {currentBill.patientId}
-            </Typography>
+            <Typography variant="h6" gutterBottom>Patient Information</Typography>
+            <Typography>Name: {currentBill.patientName}</Typography>
+            <Typography>ID: {currentBill.patientId}</Typography>
+            <Typography>Date: {currentBill.createdAt ? format(new Date(currentBill.createdAt), 'MMM dd, yyyy') : 'N/A'}</Typography>
+            <Typography>Due Date: {currentBill.dueDate ? format(new Date(currentBill.dueDate), 'MMM dd, yyyy') : 'N/A'}</Typography>
+            <Typography>Payment Terms: {currentBill.paymentTerms}</Typography>
           </Grid>
-          <Grid item xs={12} md={6} textAlign="right">
-            <Typography variant="subtitle2">Bill Details:</Typography>
-            <Typography>
-              Date: {format(new Date(currentBill.createdAt), 'MMM dd, yyyy')}
-            </Typography>
+          <Grid item xs={12} md={6}>
+            <Typography variant="h6" gutterBottom>Bill Status</Typography>
             <Typography>
               Status: <Chip 
-                label={currentBill.status} 
-                color={getStatusColor(currentBill.status)}
-                size="small"
+                label={currentBill.status || 'pending'} 
+                color={currentBill.status === 'paid' ? 'success' : 'warning'}
               />
             </Typography>
+            <Typography>Subtotal: ${currentBill.subtotal.toFixed(2)}</Typography>
+            <Typography>Tax: ${currentBill.tax.toFixed(2)}</Typography>
+            <Typography>Total Amount: ${currentBill.totalAmount.toFixed(2)}</Typography>
+            <Typography>Amount Paid: ${(currentBill.paidAmount || 0).toFixed(2)}</Typography>
+            <Typography>Remaining Balance: ${remainingAmount.toFixed(2)}</Typography>
           </Grid>
-        </Grid>
-
-        {/* Items Table */}
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Description</TableCell>
-                <TableCell align="right">Quantity</TableCell>
-                <TableCell align="right">Unit Price</TableCell>
-                <TableCell align="right">Amount</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {currentBill.items.map((item, index) => (
-                <TableRow key={index}>
-                  <TableCell>{item.description}</TableCell>
-                  <TableCell align="right">{item.quantity}</TableCell>
-                  <TableCell align="right">${item.unitPrice.toFixed(2)}</TableCell>
-                  <TableCell align="right">${item.amount.toFixed(2)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-
-        {/* Totals */}
-        <Box mt={3}>
-          <Grid container justifyContent="flex-end">
-            <Grid item xs={12} md={4}>
-              <Box p={2}>
-                <Grid container spacing={1}>
-                  <Grid item xs={6}>
-                    <Typography>Subtotal:</Typography>
-                  </Grid>
-                  <Grid item xs={6} textAlign="right">
-                    <Typography>${currentBill.subtotal.toFixed(2)}</Typography>
-                  </Grid>
-                  
-                  <Grid item xs={6}>
-                    <Typography>Tax:</Typography>
-                  </Grid>
-                  <Grid item xs={6} textAlign="right">
-                    <Typography>${currentBill.tax.toFixed(2)}</Typography>
-                  </Grid>
-                  
-                  <Grid item xs={6}>
-                    <Typography>Discount:</Typography>
-                  </Grid>
-                  <Grid item xs={6} textAlign="right">
-                    <Typography>${currentBill.discount.toFixed(2)}</Typography>
-                  </Grid>
-                  
-                  <Grid item xs={12}>
-                    <Divider sx={{ my: 1 }} />
-                  </Grid>
-                  
-                  <Grid item xs={6}>
-                    <Typography variant="subtitle1">Total:</Typography>
-                  </Grid>
-                  <Grid item xs={6} textAlign="right">
-                    <Typography variant="subtitle1">
-                      ${currentBill.totalAmount.toFixed(2)}
-                    </Typography>
-                  </Grid>
-                  
-                  <Grid item xs={6}>
-                    <Typography>Paid Amount:</Typography>
-                  </Grid>
-                  <Grid item xs={6} textAlign="right">
-                    <Typography color="success.main">
-                      ${(currentBill.paidAmount || 0).toFixed(2)}
-                    </Typography>
-                  </Grid>
-                  
-                  <Grid item xs={6}>
-                    <Typography>Remaining:</Typography>
-                  </Grid>
-                  <Grid item xs={6} textAlign="right">
-                    <Typography color="error.main">
-                      ${remainingAmount.toFixed(2)}
-                    </Typography>
-                  </Grid>
-                </Grid>
-              </Box>
-            </Grid>
-          </Grid>
-        </Box>
-
-        {/* Payment History */}
-        {currentBill.payments && currentBill.payments.length > 0 && (
-          <Box mt={4}>
-            <Typography variant="h6" gutterBottom>
-              Payment History
-            </Typography>
+          
+          {/* Bill Items */}
+          <Grid item xs={12}>
+            <Typography variant="h6" gutterBottom>Items</Typography>
             <TableContainer>
-              <Table size="small">
+              <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Date</TableCell>
-                    <TableCell>Reference</TableCell>
-                    <TableCell>Method</TableCell>
+                    <TableCell>Description</TableCell>
+                    <TableCell align="right">Quantity</TableCell>
+                    <TableCell align="right">Unit Price</TableCell>
                     <TableCell align="right">Amount</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {currentBill.payments.map((payment, index) => (
+                  {currentBill.items.map((item, index) => (
                     <TableRow key={index}>
-                      <TableCell>
-                        {format(new Date(payment.date), 'MMM dd, yyyy')}
-                      </TableCell>
-                      <TableCell>{payment.reference}</TableCell>
-                      <TableCell>{payment.method}</TableCell>
-                      <TableCell align="right">
-                        ${payment.amount.toFixed(2)}
-                      </TableCell>
+                      <TableCell>{item.description}</TableCell>
+                      <TableCell align="right">{item.quantity}</TableCell>
+                      <TableCell align="right">${item.unitPrice.toFixed(2)}</TableCell>
+                      <TableCell align="right">${item.amount.toFixed(2)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </TableContainer>
-          </Box>
-        )}
+          </Grid>
 
-        {/* Notes */}
-        {currentBill.notes && (
-          <Box mt={4}>
-            <Typography variant="subtitle2">Notes:</Typography>
-            <Typography>{currentBill.notes}</Typography>
-          </Box>
-        )}
+          {/* Notes */}
+          {currentBill.notes && (
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom>Notes</Typography>
+              <Typography>{currentBill.notes}</Typography>
+            </Grid>
+          )}
+        </Grid>
       </Paper>
 
       {/* Payment Dialog */}

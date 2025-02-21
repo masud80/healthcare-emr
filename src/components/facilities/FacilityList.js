@@ -5,67 +5,71 @@ import { db } from '../../firebase/config';
 import { Box, Button, Card, CardContent, Typography, Grid, Chip } from '@mui/material';
 import { Link } from 'react-router-dom';
 import FacilityFilter from './FacilityFilter';
+import AssignUsersModal from './AssignUsersModal';
 
 const FacilityList = () => {
   const [facilities, setFacilities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all');
+  const [selectedFacility, setSelectedFacility] = useState(null);
+  const [assignUsersModalOpen, setAssignUsersModalOpen] = useState(false);
   const user = useSelector((state) => state.auth.user);
   const role = useSelector((state) => state.auth.role);
   const isAdmin = role === 'admin';
   const isFacilityAdmin = role === 'facility_admin';
 
-  useEffect(() => {
-    const fetchFacilities = async () => {
-      try {
-        let facilitiesData = [];
-        
-        if (isAdmin) {
-          // Admins can see all facilities
-          const snapshot = await getDocs(collection(db, 'facilities'));
-          facilitiesData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-        } else {
-          // Get user's facilities from user_facilities collection
-          const userFacilitiesQuery = query(
-            collection(db, 'user_facilities'),
-            where('userId', '==', user.uid)
-          );
-          const userFacilitiesSnapshot = await getDocs(userFacilitiesQuery);
-          
-          // Get facility IDs assigned to user
-          const facilityIds = userFacilitiesSnapshot.docs.map(doc => doc.data().facilityId);
-          
-          // If user has facilities assigned, fetch their details
-          if (facilityIds.length > 0) {
-            const facilitiesSnapshot = await getDocs(collection(db, 'facilities'));
-            facilitiesData = facilitiesSnapshot.docs
-              .filter(doc => facilityIds.includes(doc.id))
-              .map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                isAdmin: doc.data().adminIds?.includes(user.uid) || false
-              }));
-          }
-        }
-
-        // Filter out inactive facilities for non-admin users
-        const filteredFacilities = facilitiesData.filter(facility => 
-          isAdmin || isFacilityAdmin ? true : facility.status === 'active'
+  const fetchFacilities = async () => {
+    try {
+      setLoading(true);
+      let facilitiesData = [];
+      
+      if (isAdmin) {
+        // Admins can see all facilities
+        const snapshot = await getDocs(collection(db, 'facilities'));
+        facilitiesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      } else {
+        // Get user's facilities from user_facilities collection
+        const userFacilitiesQuery = query(
+          collection(db, 'user_facilities'),
+          where('userId', '==', user.uid)
         );
-
-        setFacilities(filteredFacilities);
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching facilities:', err);
-        setError('Failed to fetch facilities');
-        setLoading(false);
+        const userFacilitiesSnapshot = await getDocs(userFacilitiesQuery);
+        
+        // Get facility IDs assigned to user
+        const facilityIds = userFacilitiesSnapshot.docs.map(doc => doc.data().facilityId);
+        
+        // If user has facilities assigned, fetch their details
+        if (facilityIds.length > 0) {
+          const facilitiesSnapshot = await getDocs(collection(db, 'facilities'));
+          facilitiesData = facilitiesSnapshot.docs
+            .filter(doc => facilityIds.includes(doc.id))
+            .map(doc => ({
+              id: doc.id,
+              ...doc.data(),
+              isAdmin: doc.data().adminIds?.includes(user.uid) || false
+            }));
+        }
       }
-    };
 
+      // Filter out inactive facilities for non-admin users
+      const filteredFacilities = facilitiesData.filter(facility => 
+        isAdmin || isFacilityAdmin ? true : facility.status === 'active'
+      );
+
+      setFacilities(filteredFacilities);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching facilities:', err);
+      setError('Failed to fetch facilities');
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchFacilities();
   }, [user, isAdmin, isFacilityAdmin]);
 
@@ -130,15 +134,27 @@ const FacilityList = () => {
                     View Details
                   </Button>
                   {(isAdmin || (isFacilityAdmin && (facility.adminIds?.includes(user.uid) || facility.createdBy === user.uid))) && (
-                    <Button
-                      component={Link}
-                      to={`/facilities/${facility.id}`}
-                      variant="contained"
-                      color="primary"
-                      state={{ isEditing: true }}
-                    >
-                      Edit
-                    </Button>
+                    <>
+                      <Button
+                        component={Link}
+                        to={`/facilities/${facility.id}`}
+                        variant="contained"
+                        color="primary"
+                        state={{ isEditing: true }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        onClick={() => {
+                          setSelectedFacility(facility);
+                          setAssignUsersModalOpen(true);
+                        }}
+                      >
+                        Assign Users
+                      </Button>
+                    </>
                   )}
                 </Box>
               </CardContent>
@@ -146,6 +162,18 @@ const FacilityList = () => {
           </Grid>
         ))}
       </Grid>
+
+      <AssignUsersModal
+        open={assignUsersModalOpen}
+        onClose={(updated) => {
+          setAssignUsersModalOpen(false);
+          setSelectedFacility(null);
+          if (updated) {
+            fetchFacilities();
+          }
+        }}
+        facility={selectedFacility}
+      />
     </Box>
   );
 };

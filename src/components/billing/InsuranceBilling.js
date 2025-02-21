@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useDispatch } from 'react-redux';
 import {
   Container,
   Paper,
@@ -24,6 +23,7 @@ import {
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers';
 import { formatCurrency } from '../../utils/billingUtils';
+import '../../styles/billingDashboard.css'; // Importing the CSS file
 
 const insuranceTypes = [
   { value: 'private', label: 'Private Insurance' },
@@ -42,8 +42,7 @@ const claimStatus = {
   partial: { label: 'Partially Approved', color: 'warning' }
 };
 
-const InsuranceBilling = ({ bill }) => {
-  const dispatch = useDispatch();
+const InsuranceBilling = ({ bill = null }) => {
   const [insuranceClaim, setInsuranceClaim] = useState({
     insuranceProvider: '',
     policyNumber: '',
@@ -64,6 +63,17 @@ const InsuranceBilling = ({ bill }) => {
 
   const [showClaimDialog, setShowClaimDialog] = useState(false);
   const [error, setError] = useState(null);
+
+  if (!bill) {
+    return (
+      <Paper className="paper" sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6">Insurance Claims</Typography>
+        <Typography variant="body2" color="textSecondary" sx={{ mt: 2 }}>
+          No bill selected
+        </Typography>
+      </Paper>
+    );
+  }
 
   const handleInputChange = (field, value) => {
     setInsuranceClaim(prev => ({
@@ -100,6 +110,11 @@ const InsuranceBilling = ({ bill }) => {
     } catch (err) {
       setError(err.message);
     }
+  };
+
+  const handleViewClaimDetails = (claim) => {
+    // Logic to view claim details
+    console.log('Viewing claim details for:', claim);
   };
 
   const renderClaimHistory = () => {
@@ -158,7 +173,7 @@ const InsuranceBilling = ({ bill }) => {
 
   return (
     <Container>
-      <Paper sx={{ p: 3, mb: 3 }}>
+<Paper className="paper" sx={{ p: 3, mb: 3 }}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h6">Insurance Claims</Typography>
           <Button

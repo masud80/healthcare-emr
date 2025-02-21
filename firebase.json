@@ -7,7 +7,7 @@
     "providers": ["email"]
   },
   "hosting": {
-    "public": "build",
+    "public": "public",
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -19,5 +19,8 @@
         "destination": "/index.html"
       }
     ]
+  },
+  "functions": {
+    "source": "functions"
   }
 }

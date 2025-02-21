@@ -4,7 +4,9 @@ import store from './redux/store';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import Layout from './components/layout/Layout';
+import ForgotPassword from './components/auth/ForgotPassword';
 import BillingDashboard from './components/billing/BillingDashboard';
+import BillDetails from './components/billing/BillDetails';
 import CreateVisit from './components/visits/CreateVisit';
 import VisitList from './components/visits/VisitList';
 import VisitDetails from './components/visits/VisitDetails';
@@ -24,7 +26,7 @@ import PrivateRoute from './components/auth/PrivateRoute';
 import PharmacyList from './components/pharmacy/PharmacyList';
 import CreatePharmacy from './components/pharmacy/CreatePharmacy';
 import DatabaseInitializer from './components/utils/DatabaseInitializer';
-import MedicalRecords from './components/records/MedicalRecords';
+  import MedicalRecords from './components/records/MedicalRecords';
 import AssignFacilityTest from './components/admin/AssignFacilityTest';
 import AuditReport from './components/audit/AuditReport';
 import './styles/components.css';
@@ -36,6 +38,7 @@ function App() {
         <Router>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/" element={<Layout />}>
               <Route index element={<Navigate to="/dashboard" />} />
               
@@ -70,7 +73,12 @@ function App() {
               {/* Admin and Facility Admin routes */}
               <Route element={<PrivateRoute requireAdmin={true} requireFacilityAdmin={true} />}>
                 <Route path="admin/pharmacies" element={<PharmacyList />} />
-                <Route path="admin/billing" element={<BillingDashboard />} />
+              </Route>
+
+              {/* Billing routes - Admin and Facility Admin only */}
+              <Route element={<PrivateRoute requireAdmin={true} requireFacilityAdmin={true} />}>
+                <Route path="billing" element={<BillingDashboard />} />
+                <Route path="billing/:billId" element={<BillDetails />} />
               </Route>
             </Route>
           </Routes>

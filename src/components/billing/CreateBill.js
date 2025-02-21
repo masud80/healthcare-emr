@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { getApp } from 'firebase/app';
 import {
   Container,
   Paper,
@@ -58,12 +60,34 @@ const CreateBill = () => {
     { value: 'net_60', label: 'Net 60' }
   ];
 
-  const handleInputChange = (e) => {
+  const [patientError, setPatientError] = useState('');
+
+  const handleInputChange = async (e) => {
     const { name, value } = e.target;
     setBillData(prev => ({
       ...prev,
       [name]: value
     }));
+
+    // Validate patient ID when it changes
+    if (name === 'patientId' && value) {
+      try {
+        const db = getFirestore(getApp());
+        const patientDoc = await getDoc(doc(db, 'patients', value));
+        if (!patientDoc.exists()) {
+          setPatientError('Patient ID not found');
+        } else {
+          const patientData = patientDoc.data();
+          setBillData(prev => ({
+            ...prev,
+            patientName: patientData.name
+          }));
+          setPatientError('');
+        }
+      } catch (err) {
+        setPatientError('Error validating patient ID');
+      }
+    }
   };
 
   const handleItemChange = (index, field, value) => {
@@ -126,6 +150,13 @@ const CreateBill = () => {
     setLoading(true);
     setError(null);
 
+    // Validate patient ID before submitting
+    if (patientError) {
+      setError('Please fix the patient ID error before submitting');
+      setLoading(false);
+      return;
+    }
+
     try {
       await dispatch(createBill({
         ...billData,
@@ -157,6 +188,8 @@ const CreateBill = () => {
                 value={billData.patientId}
                 onChange={handleInputChange}
                 required
+                error={!!patientError}
+                helperText={patientError}
               />
             </Grid>
             <Grid item xs={12} md={6}>

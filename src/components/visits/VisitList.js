@@ -17,7 +17,7 @@ import {
   Chip,
   IconButton,
   TextField,
-  InputAdornment
+  InputAdornment,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -32,7 +32,7 @@ const VisitList = ({ patientId }) => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   useEffect(() => {
     if (user) {
       dispatch(fetchPatientVisits(patientId));

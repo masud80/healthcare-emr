@@ -16,6 +16,7 @@ import '../../styles/patientDetailsEnhancements.css';
 import '../../styles/patientCardStyles.css';
 import '../../styles/patientCardOutline.css';
 import '../../styles/tabs.css';
+import '../../styles/aiSummary.css';
 
 const TabPanel = ({ children, value, index }) => (
   <div hidden={value !== index}>
@@ -35,8 +36,12 @@ const PatientDetails = () => {
   const [openNoteDialog, setOpenNoteDialog] = useState(false);
   const [openPrescriptionDialog, setOpenPrescriptionDialog] = useState(false);
   const [newNote, setNewNote] = useState('');
-  const [editingFacility, setEditingFacility] = useState(false);
-  const [selectedFacilityId, setSelectedFacilityId] = useState('');
+const [editingFacility, setEditingFacility] = useState(false);
+const [selectedFacilityId, setSelectedFacilityId] = useState('');
+const [editingBasicInfo, setEditingBasicInfo] = useState(false);
+const [editingEmergencyContact, setEditingEmergencyContact] = useState(false);
+const [editedBasicInfo, setEditedBasicInfo] = useState({});
+const [editedEmergencyContact, setEditedEmergencyContact] = useState({});
 
   useEffect(() => {
     dispatch(fetchFacilities());
@@ -56,6 +61,34 @@ const PatientDetails = () => {
         console.error('Error fetching patient details:', error);
       });
   }, [dispatch, id]);
+
+  const handleUpdateBasicInfo = async () => {
+    try {
+      await updateDoc(doc(db, 'patients', id), editedBasicInfo);
+      dispatch(setSelectedPatient({
+        ...selectedPatient,
+        ...editedBasicInfo
+      }));
+      setEditingBasicInfo(false);
+    } catch (error) {
+      console.error('Error updating basic information:', error);
+    }
+  };
+
+  const handleUpdateEmergencyContact = async () => {
+    try {
+      await updateDoc(doc(db, 'patients', id), {
+        emergencyContact: editedEmergencyContact
+      });
+      dispatch(setSelectedPatient({
+        ...selectedPatient,
+        emergencyContact: editedEmergencyContact
+      }));
+      setEditingEmergencyContact(false);
+    } catch (error) {
+      console.error('Error updating emergency contact:', error);
+    }
+  };
 
   const handleUpdateFacility = async () => {
     try {
@@ -123,12 +156,14 @@ const PatientDetails = () => {
             <h1 className="title" style={{ margin: 0 }}>{selectedPatient.name}</h1>
             <Button
               variant="contained"
-              sx={{ 
-                backgroundColor: '#1a237e',
-                '&:hover': {
-                  backgroundColor: '#0d47a1'
-                }
-              }}
+                  sx={{ 
+                    backgroundColor: '#1a237e',
+                    padding: '4px 16px',
+                    minWidth: '100px',
+                    '&:hover': {
+                      backgroundColor: '#0d47a1'
+                    }
+                  }}
               onClick={() => navigate(`/patients/${id}/visits/new`)}
             >
               New Visit
@@ -170,15 +205,156 @@ const PatientDetails = () => {
         </div>
 
         <TabPanel value={tabValue} index={0}>
+          <div className="ai-summary">
+            <h2>AI Health Analysis</h2>
+            <div className="ai-summary-section">
+              <h3>1. Vital Signs Trends</h3>
+              <ul>
+                <li>Blood pressure: <span className="ai-summary-normal">Generally stable and within normal range (120/80 mmHg or lower)</span></li>
+                <li>Heart rate: <span className="ai-summary-highlight">Higher than normal during the most recent visit (111 bpm)</span></li>
+                <li>Temperature: <span className="ai-summary-normal">Within normal range for all visits (98.0 °F)</span></li>
+              </ul>
+            </div>
+            <div className="ai-summary-section">
+              <h3>2. Symptom Patterns</h3>
+              <ul>
+                <li>Headache was reported during the most recent visit only</li>
+                <li>No symptoms were reported during the previous four visits</li>
+              </ul>
+            </div>
+            <div className="ai-summary-section">
+              <h3>3. Effectiveness of Previous Action Plans</h3>
+              <p>The previous action plans recommended routine checkups and maintaining current health regimens.</p>
+              <p>Since the patient's vitals were within normal range and there were no reported symptoms (except for the recent headache), these action plans seem to have been effective in maintaining the patient's health.</p>
+            </div>
+            <div className="ai-summary-section">
+              <h3>4. Recommendations for Future Care</h3>
+              <ul>
+                <li>Schedule a follow-up visit in 6 months to monitor the patient's progress</li>
+                <li>Based on the elevated heart rate during the most recent visit, consider performing an electrocardiogram (ECG) to assess heart health</li>
+                <li>If the headache persists or worsens, further evaluation and treatment may be necessary</li>
+                <li>Encourage the patient to maintain a healthy lifestyle, including regular exercise, a balanced diet, and adequate sleep</li>
+              </ul>
+            </div>
+          </div>
+
           <div className="grid grid-2-cols">
-            <div>
-              <h2 className="subtitle">Basic Information</h2>
+              <div>
+              <div className="flex flex-between flex-center">
+                <h2 className="subtitle">Basic Information</h2>
+                <Button
+                  variant="contained"
+                  size="medium"
+              sx={{ 
+                backgroundColor: '#1a237e',
+                padding: '4px 16px',
+                minWidth: '100px',
+                '&:hover': {
+                  backgroundColor: '#0d47a1'
+                }
+              }}
+                  onClick={() => {
+                    setEditedBasicInfo({
+                      dateOfBirth: selectedPatient.dateOfBirth,
+                      gender: selectedPatient.gender,
+                      contact: selectedPatient.contact,
+                      email: selectedPatient.email,
+                      address: selectedPatient.address
+                    });
+                    setEditingBasicInfo(true);
+                  }}
+                >
+                  Edit
+                </Button>
+              </div>
               <div className="paper">
-                <p>Date of Birth: {format(new Date(selectedPatient.dateOfBirth), 'MM/dd/yyyy')}</p>
-                <p>Gender: {selectedPatient.gender}</p>
-                <p>Contact: {selectedPatient.contact}</p>
-                <p>Email: {selectedPatient.email}</p>
-                <p>Address: {selectedPatient.address}</p>
+                {!editingBasicInfo ? (
+                  <>
+                    <p>Date of Birth: {format(new Date(selectedPatient.dateOfBirth), 'MM/dd/yyyy')}</p>
+                    <p>Gender: {selectedPatient.gender}</p>
+                    <p>Contact: {selectedPatient.contact}</p>
+                    <p>Email: {selectedPatient.email}</p>
+                    <p>Address: {selectedPatient.address}</p>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label>Date of Birth</label>
+                      <input
+                        type="date"
+                        className="input"
+                        value={editedBasicInfo.dateOfBirth}
+                        onChange={(e) => setEditedBasicInfo({...editedBasicInfo, dateOfBirth: e.target.value})}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label>Gender</label>
+                      <select
+                        className="select"
+                        value={editedBasicInfo.gender}
+                        onChange={(e) => setEditedBasicInfo({...editedBasicInfo, gender: e.target.value})}
+                      >
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label>Contact</label>
+                      <input
+                        type="tel"
+                        className="input"
+                        value={editedBasicInfo.contact}
+                        onChange={(e) => setEditedBasicInfo({...editedBasicInfo, contact: e.target.value})}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label>Email</label>
+                      <input
+                        type="email"
+                        className="input"
+                        value={editedBasicInfo.email}
+                        onChange={(e) => setEditedBasicInfo({...editedBasicInfo, email: e.target.value})}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label>Address</label>
+                      <input
+                        type="text"
+                        className="input"
+                        value={editedBasicInfo.address}
+                        onChange={(e) => setEditedBasicInfo({...editedBasicInfo, address: e.target.value})}
+                      />
+                    </div>
+                    <div className="dialog-actions">
+                      <Button
+                        variant="outlined"
+                        onClick={() => setEditingBasicInfo(false)}
+                        sx={{ 
+                          mr: 1,
+                          padding: '4px 16px',
+                          minWidth: '100px'
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="contained"
+                        onClick={handleUpdateBasicInfo}
+                        sx={{ 
+                          backgroundColor: '#1a237e',
+                          padding: '4px 16px',
+                          minWidth: '100px',
+                          '&:hover': {
+                            backgroundColor: '#0d47a1'
+                          }
+                        }}
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  </>
+                )}
                 <div className="facility-section">
                   <h3>Facility</h3>
                   {!editingFacility && (
@@ -189,12 +365,14 @@ const PatientDetails = () => {
                       {(role === 'admin' || role === 'doctor') && (
                         <Button
                           variant="contained"
-                          sx={{ 
-                            backgroundColor: '#1a237e',
-                            '&:hover': {
-                              backgroundColor: '#0d47a1'
-                            }
-                          }}
+                        sx={{ 
+                          backgroundColor: '#1a237e',
+                          padding: '4px 16px',
+                          minWidth: '100px',
+                          '&:hover': {
+                            backgroundColor: '#0d47a1'
+                          }
+                        }}
                           onClick={() => setEditingFacility(true)}
                         >
                           Transfer to Another Facility
@@ -220,19 +398,25 @@ const PatientDetails = () => {
                         <Button
                           variant="outlined"
                           onClick={() => setEditingFacility(false)}
-                          sx={{ mr: 1 }}
+                sx={{ 
+                  mr: 1,
+                  padding: '4px 16px',
+                  minWidth: '100px'
+                }}
                         >
                           Cancel
                         </Button>
                         <Button
                           variant="contained"
                           onClick={handleUpdateFacility}
-                          sx={{ 
-                            backgroundColor: '#1a237e',
-                            '&:hover': {
-                              backgroundColor: '#0d47a1'
-                            }
-                          }}
+                sx={{ 
+                  backgroundColor: '#1a237e',
+                  padding: '4px 16px',
+                  minWidth: '100px',
+                  '&:hover': {
+                    backgroundColor: '#0d47a1'
+                  }
+                }}
                         >
                           Update
                         </Button>
@@ -243,11 +427,96 @@ const PatientDetails = () => {
               </div>
             </div>
             <div>
-              <h2 className="subtitle">Emergency Contact</h2>
+              <div className="flex flex-between flex-center">
+                <h2 className="subtitle">Emergency Contact</h2>
+                <Button
+                  variant="contained"
+                  size="medium"
+                sx={{ 
+                  backgroundColor: '#1a237e',
+                  padding: '4px 16px',
+                  minWidth: '100px',
+                  '&:hover': {
+                    backgroundColor: '#0d47a1'
+                  }
+                }}
+                  onClick={() => {
+                    setEditedEmergencyContact({
+                      name: selectedPatient.emergencyContact?.name || '',
+                      relationship: selectedPatient.emergencyContact?.relationship || '',
+                      phone: selectedPatient.emergencyContact?.phone || ''
+                    });
+                    setEditingEmergencyContact(true);
+                  }}
+                >
+                  Edit
+                </Button>
+              </div>
               <div className="paper">
-                <p>Name: {selectedPatient.emergencyContact?.name}</p>
-                <p>Relationship: {selectedPatient.emergencyContact?.relationship}</p>
-                <p>Phone: {selectedPatient.emergencyContact?.phone}</p>
+                {!editingEmergencyContact ? (
+                  <>
+                    <p>Name: {selectedPatient.emergencyContact?.name}</p>
+                    <p>Relationship: {selectedPatient.emergencyContact?.relationship}</p>
+                    <p>Phone: {selectedPatient.emergencyContact?.phone}</p>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label>Name</label>
+                      <input
+                        type="text"
+                        className="input"
+                        value={editedEmergencyContact.name}
+                        onChange={(e) => setEditedEmergencyContact({...editedEmergencyContact, name: e.target.value})}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label>Relationship</label>
+                      <input
+                        type="text"
+                        className="input"
+                        value={editedEmergencyContact.relationship}
+                        onChange={(e) => setEditedEmergencyContact({...editedEmergencyContact, relationship: e.target.value})}
+                      />
+                    </div>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label>Phone</label>
+                      <input
+                        type="tel"
+                        className="input"
+                        value={editedEmergencyContact.phone}
+                        onChange={(e) => setEditedEmergencyContact({...editedEmergencyContact, phone: e.target.value})}
+                      />
+                    </div>
+                    <div className="dialog-actions">
+                      <Button
+                        variant="outlined"
+                        onClick={() => setEditingEmergencyContact(false)}
+                        sx={{ 
+                          mr: 1,
+                          padding: '4px 16px',
+                          minWidth: '100px'
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="contained"
+                        onClick={handleUpdateEmergencyContact}
+                sx={{ 
+                  backgroundColor: '#1a237e',
+                  padding: '4px 16px',
+                  minWidth: '100px',
+                  '&:hover': {
+                    backgroundColor: '#0d47a1'
+                  }
+                }}
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -267,12 +536,14 @@ const PatientDetails = () => {
             <h2 className="subtitle" style={{ margin: 0 }}>Clinical Notes</h2>
             <Button
               variant="contained"
-              sx={{ 
-                backgroundColor: '#1a237e',
-                '&:hover': {
-                  backgroundColor: '#0d47a1'
-                }
-              }}
+                sx={{ 
+                  backgroundColor: '#1a237e',
+                  padding: '4px 16px',
+                  minWidth: '100px',
+                  '&:hover': {
+                    backgroundColor: '#0d47a1'
+                  }
+                }}
               onClick={() => setOpenNoteDialog(true)}
             >
               Add Note
@@ -296,6 +567,8 @@ const PatientDetails = () => {
                 variant="contained"
                 sx={{ 
                   backgroundColor: '#1a237e',
+                  padding: '4px 16px',
+                  minWidth: '100px',
                   '&:hover': {
                     backgroundColor: '#0d47a1'
                   }
@@ -364,7 +637,11 @@ const PatientDetails = () => {
               <Button
                 variant="outlined"
                 onClick={() => setOpenNoteDialog(false)}
-                sx={{ mr: 1 }}
+                        sx={{ 
+                          mr: 1,
+                          padding: '4px 16px',
+                          minWidth: '100px'
+                        }}
               >
                 Cancel
               </Button>
@@ -373,6 +650,8 @@ const PatientDetails = () => {
                 onClick={handleAddNote}
                 sx={{ 
                   backgroundColor: '#1a237e',
+                  padding: '4px 16px',
+                  minWidth: '100px',
                   '&:hover': {
                     backgroundColor: '#0d47a1'
                   }

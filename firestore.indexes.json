@@ -1,18 +1,92 @@
 {
   "indexes": [
     {
-      "collectionGroup": "bills",
+      "collectionGroup": "audit",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "timestamp", "order": "ASCENDING" },
+        { "fieldPath": "details.patientName", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "audit",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "timestamp", "order": "DESCENDING" },
+        { "fieldPath": "details.patientName", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "patients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "name", "order": "ASCENDING" },
+        { "fieldPath": "facilityId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "appointments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "date", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "visits",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "patientId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "ASCENDING" }
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "medical_records",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "patientId", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "patients",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "facilityId", "order": "ASCENDING" },
+        { "fieldPath": "name", "order": "ASCENDING" }
       ]
     },
     {
       "collectionGroup": "bills",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "billNumber", "order": "ASCENDING" }
+        { "fieldPath": "facilityId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "bills",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "patientId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "bills",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "patientId", "order": "ASCENDING" },
+        { "fieldPath": "facilityId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "user_facilities",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "facilityId", "order": "ASCENDING" }
       ]
     }
   ],

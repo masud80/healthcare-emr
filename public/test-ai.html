@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test AI Analysis</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-functions-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script>
+        // Enable more detailed Firebase logging
+        const debugMode = true;
+        if (debugMode) {
+            console.log('Debug mode enabled');
+        }
+
+        // Add auth state observer
+        function initAuthObserver() {
+            firebase.auth().onAuthStateChanged((user) => {
+                console.log('Auth state changed:', user ? 'User logged in' : 'User logged out');
+            });
+        }
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyARz-ZYgvkMSkGNNCwp6Bi1t218NmOoC50",
+            authDomain: "quantumleap-emr-dev.firebaseapp.com",
+            projectId: "quantumleap-emr-dev",
+            storageBucket: "quantumleap-emr-dev.appspot.com",
+            messagingSenderId: "636082133113",
+            appId: "1:636082133113:web:7385a3648eeebe3239dca8"
+        };
+
+        // Initialize Firebase and setup listeners
+        try {
+            firebase.initializeApp(firebaseConfig);
+            console.log('Firebase initialized successfully');
+            initAuthObserver();
+            
+            // Setup button listeners after DOM is loaded
+            window.addEventListener('DOMContentLoaded', (event) => {
+                console.log('DOM fully loaded');
+                const startButton = document.getElementById('startButton');
+                if (startButton) {
+                    startButton.addEventListener('click', login);
+                    console.log('Start button listener added');
+                } else {
+                    console.error('Start button not found');
+                }
+            });
+        } catch (error) {
+            console.error('Firebase initialization error:', error);
+            document.getElementById('status').textContent = 'Firebase initialization error: ' + error.message;
+        }
+
+        async function login() {
+            console.log('Login button clicked');
+            document.getElementById('status').textContent = 'Attempting to log in...';
+            try {
+                // First sign out any existing user
+                await firebase.auth().signOut();
+                
+                // Then attempt to sign in
+                const userCredential = await firebase.auth().signInWithEmailAndPassword('admin@healthcare.com', 'admin123');
+                console.log('Logged in successfully:', userCredential.user.uid);
+                document.getElementById('status').textContent = 'Logged in, fetching patients...';
+                fetchPatients();
+            } catch (error) {
+                console.error('Login error:', error);
+                document.getElementById('status').textContent = 'Login error: ' + error.message;
+            }
+        }
+
+        async function fetchPatients() {
+            try {
+                const snapshot = await firebase.firestore().collection('patients').limit(1).get();
+                if (snapshot.empty) {
+                    document.getElementById('status').textContent = 'No patients found';
+                    return;
+                }
+
+                const patientId = snapshot.docs[0].id;
+                document.getElementById('status').textContent = 'Found patient: ' + patientId;
+                document.getElementById('analyzeBtn').style.display = 'block';
+                document.getElementById('analyzeBtn').onclick = () => analyzePatient(patientId);
+            } catch (error) {
+                console.error('Error fetching patients:', error);
+                document.getElementById('status').textContent = 'Error fetching patients: ' + error.message;
+            }
+        }
+
+        async function analyzePatient(patientId) {
+            try {
+                document.getElementById('status').textContent = 'Fetching patient data...';
+                // First get the patient data
+                const patientDoc = await firebase.firestore().collection('patients').doc(patientId).get();
+                if (!patientDoc.exists) {
+                    document.getElementById('status').textContent = 'Patient not found';
+                    return;
+                }
+                const rawData = patientDoc.data();
+                
+                // Format the data according to the expected interface
+                console.log('Raw patient data:', rawData);
+                
+                // Create sample visit data if none exists
+                const sampleVisits = [{
+                    date: new Date().toISOString(),
+                    vitals: {
+                        bloodPressure: '120/80',
+                        heartRate: '72',
+                        temperature: '98.6'
+                    },
+                    symptoms: ['fever', 'cough'],
+                    actionPlan: 'Rest and hydration recommended',
+                    notes: 'Patient reports symptoms started 2 days ago'
+                }];
+
+                const patientData = {
+                    dateOfBirth: rawData.dateOfBirth || rawData.dob || '1980-01-01',
+                    visits: rawData.visits && rawData.visits.length > 0 ? 
+                        rawData.visits.map(visit => ({
+                            date: visit.date || new Date().toISOString(),
+                            vitals: {
+                                bloodPressure: visit.vitals?.bloodPressure || 'N/A',
+                                heartRate: visit.vitals?.heartRate || 'N/A',
+                                temperature: visit.vitals?.temperature || 'N/A'
+                            },
+                            symptoms: Array.isArray(visit.symptoms) ? visit.symptoms : [],
+                            actionPlan: visit.actionPlan || 'N/A',
+                            notes: visit.notes || 'N/A'
+                        })) : sampleVisits
+                };
+
+                console.log('Formatted patient data:', patientData);
+                
+                document.getElementById('status').textContent = 'Analyzing patient data...';
+                const functions = firebase.functions();
+                const analyzePatientData = functions.httpsCallable('analyzePatient');
+                const result = await analyzePatientData(patientData);
+                
+                document.getElementById('result').textContent = JSON.stringify(result.data, null, 2);
+                document.getElementById('status').textContent = 'Analysis complete!';
+            } catch (error) {
+                console.error('Analysis error:', error);
+                document.getElementById('status').textContent = 'Analysis error: ' + error.message;
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px 0;
+            cursor: pointer;
+        }
+        #status {
+            margin: 20px 0;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+        }
+        #result {
+            white-space: pre-wrap;
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test AI Analysis</h1>
+    <div id="status">Ready to start</div>
+    <button id="startButton">Start Test</button>
+    <button id="analyzeBtn" style="display: none">Analyze Patient Data</button>
+    <pre id="result"></pre>
+</body>
+</html>

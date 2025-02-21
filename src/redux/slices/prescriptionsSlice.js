@@ -1,15 +1,20 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { collection, addDoc, getDocs, doc, updateDoc, query, where } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, updateDoc, query, where, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 
 // Async thunks
 export const createPrescription = createAsyncThunk(
   'prescriptions/createPrescription',
   async ({ patientId, medications, pharmacy }) => {
+    // Get patient's facility ID
+    const patientDoc = await getDoc(doc(db, 'patients', patientId));
+    const facilityId = patientDoc.data().facilityId;
+
     const prescriptionData = {
       patientId,
       medications,
       pharmacy,
+      facilityId,
       createdAt: new Date().toISOString(),
       status: 'active'
     };

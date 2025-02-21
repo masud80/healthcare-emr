@@ -1,3 +1,4 @@
+import { createAsyncThunk } from '@reduxjs/toolkit';
 import { 
   collection, 
   getDocs, 
@@ -9,6 +10,7 @@ import {
   where,
   orderBy
 } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '../../firebase/config';
 import {
   setBills,
@@ -16,152 +18,275 @@ import {
   setLoading,
   setError,
   addBill,
-  updateBill
+  updateBill,
+  emailBillStart,
+  emailBillSuccess,
+  emailBillFailure
 } from '../slices/billingSlice';
 
+// Helper function to get user's facilities
+async function getUserFacilities(userId) {
+  const userFacilitiesRef = collection(db, 'user_facilities');
+  const q = query(userFacilitiesRef, where('userId', '==', userId));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => doc.data().facilityId);
+}
+
 // Fetch all bills
-export const fetchBills = () => async (dispatch) => {
+export const fetchBills = () => async (dispatch, getState) => {
   try {
     dispatch(setLoading(true));
+    const { role, user } = getState().auth;
+    
     const billsRef = collection(db, 'bills');
-    const q = query(billsRef, orderBy('createdAt', 'desc'));
+    
+    let q;
+    // Admin can see all bills
+    if (role === 'admin') {
+      q = query(billsRef, orderBy('createdAt', 'desc'));
+    } else if (role === 'facility_admin') {
+      // Get facility admin's facilities
+      const userFacilities = await getUserFacilities(user.uid);
+      
+      // Facility admin sees bills from their facilities
+      q = query(
+        billsRef,
+        where('facilityId', 'in', userFacilities),
+        orderBy('createdAt', 'desc')
+      );
+    } else {
+      dispatch(setError('Access denied: Insufficient permissions'));
+      return;
+    }
+    
     const snapshot = await getDocs(q);
-    const bills = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    const bills = snapshot.docs.map(doc => {
+      const data = doc.data();
+      // Convert any Timestamp objects to ISO strings
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate?.() ? data.createdAt.toDate().toISOString() : data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.() ? data.updatedAt.toDate().toISOString() : data.updatedAt,
+        dueDate: data.dueDate?.toDate?.() ? data.dueDate.toDate().toISOString() : data.dueDate,
+        lastPaymentDate: data.lastPaymentDate?.toDate?.() ? data.lastPaymentDate.toDate().toISOString() : data.lastPaymentDate,
+        payments: data.payments?.map(payment => ({
+          ...payment,
+          date: payment.date?.toDate?.() ? payment.date.toDate().toISOString() : payment.date
+        }))
+      };
+    });
+    
     dispatch(setBills(bills));
   } catch (error) {
+    console.error('Error fetching bills:', error);
     dispatch(setError(error.message));
+  } finally {
+    dispatch(setLoading(false));
   }
 };
 
 // Fetch bills by patient ID
-export const fetchPatientBills = (patientId) => async (dispatch) => {
+export const fetchPatientBills = (patientId) => async (dispatch, getState) => {
   try {
     dispatch(setLoading(true));
+    const { role, user } = getState().auth;
     const billsRef = collection(db, 'bills');
-    const q = query(
-      billsRef, 
-      where('patientId', '==', patientId),
-      orderBy('createdAt', 'desc')
-    );
+    
+    let q;
+    if (role === 'admin') {
+      q = query(
+        billsRef,
+        where('patientId', '==', patientId),
+        orderBy('createdAt', 'desc')
+      );
+    } else if (role === 'facility_admin') {
+      // Get facility admin's facilities
+      const userFacilities = await getUserFacilities(user.uid);
+      
+      q = query(
+        billsRef,
+        where('patientId', '==', patientId),
+        where('facilityId', 'in', userFacilities),
+        orderBy('createdAt', 'desc')
+      );
+    } else {
+      dispatch(setError('Access denied: Insufficient permissions'));
+      return;
+    }
+    
     const snapshot = await getDocs(q);
-    const bills = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    const bills = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate?.() ? data.createdAt.toDate().toISOString() : data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.() ? data.updatedAt.toDate().toISOString() : data.updatedAt,
+        dueDate: data.dueDate?.toDate?.() ? data.dueDate.toDate().toISOString() : data.dueDate,
+        lastPaymentDate: data.lastPaymentDate?.toDate?.() ? data.lastPaymentDate.toDate().toISOString() : data.lastPaymentDate,
+        payments: data.payments?.map(payment => ({
+          ...payment,
+          date: payment.date?.toDate?.() ? payment.date.toDate().toISOString() : payment.date
+        }))
+      };
+    });
     dispatch(setBills(bills));
   } catch (error) {
+    console.error('Error fetching patient bills:', error);
     dispatch(setError(error.message));
+  } finally {
+    dispatch(setLoading(false));
   }
 };
 
 // Fetch single bill
-export const fetchBillById = (billId) => async (dispatch) => {
+export const fetchBillById = (billId) => async (dispatch, getState) => {
   try {
     dispatch(setLoading(true));
-    const billRef = doc(db, 'bills', billId);
-    const billDoc = await getDoc(billRef);
-    if (billDoc.exists()) {
-      dispatch(setCurrentBill({
-        id: billDoc.id,
-        ...billDoc.data()
-      }));
-    } else {
-      dispatch(setError('Bill not found'));
-    }
-  } catch (error) {
-    dispatch(setError(error.message));
-  }
-};
+    const { role, user } = getState().auth;
 
-// Create new bill
-export const createBill = (billData) => async (dispatch) => {
-  try {
-    dispatch(setLoading(true));
-    const billsRef = collection(db, 'bills');
-    const newBill = {
-      ...billData,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    const docRef = await addDoc(billsRef, newBill);
-    const createdBill = {
-      id: docRef.id,
-      ...newBill
-    };
-    dispatch(addBill(createdBill));
-    return createdBill;
-  } catch (error) {
-    dispatch(setError(error.message));
-    throw error;
-  }
-};
-
-// Update bill
-export const updateBillById = (billId, updates) => async (dispatch) => {
-  try {
-    dispatch(setLoading(true));
-    const billRef = doc(db, 'bills', billId);
-    const updatedData = {
-      ...updates,
-      updatedAt: new Date().toISOString()
-    };
-    await updateDoc(billRef, updatedData);
-    const updatedBill = {
-      id: billId,
-      ...updatedData
-    };
-    dispatch(updateBill(updatedBill));
-    return updatedBill;
-  } catch (error) {
-    dispatch(setError(error.message));
-    throw error;
-  }
-};
-
-// Process payment
-export const processPayment = (billId, paymentData) => async (dispatch) => {
-  try {
-    dispatch(setLoading(true));
     const billRef = doc(db, 'bills', billId);
     const billDoc = await getDoc(billRef);
     
     if (!billDoc.exists()) {
-      throw new Error('Bill not found');
+      dispatch(setError('Bill not found'));
+      return;
+    }
+
+    const billData = billDoc.data();
+
+    if (!billData) {
+      dispatch(setError('Invalid bill data'));
+      return;
+    }
+    
+    // Check access permissions
+    if (role === 'admin') {
+      // Admin has access to all bills
+      dispatch(setCurrentBill({
+        id: billDoc.id,
+        ...serializeBillData(billData)
+      }));
+    } else if (role === 'facility_admin') {
+      // For facility admin, only check facility access if bill has a facilityId
+      if (!billData.facilityId) {
+        dispatch(setError('Access denied: This bill is not associated with any facility'));
+      } else {
+        const userFacilities = await getUserFacilities(user.uid);
+        if (userFacilities.includes(billData.facilityId)) {
+          dispatch(setCurrentBill({
+            id: billDoc.id,
+            ...serializeBillData(billData)
+          }));
+        } else {
+          dispatch(setError('Access denied: You do not have permission to view this bill'));
+        }
+      }
+    } else {
+      dispatch(setError('Access denied: Insufficient permissions'));
+    }
+  } catch (error) {
+    console.error('Error fetching bill:', error);
+    dispatch(setError(error.message));
+  } finally {
+    dispatch(setLoading(false));
+  }
+};
+
+// Helper function to serialize bill data
+function serializeBillData(billData) {
+  return {
+    ...billData,
+    createdAt: billData.createdAt?.toDate?.() ? billData.createdAt.toDate().toISOString() : billData.createdAt,
+    updatedAt: billData.updatedAt?.toDate?.() ? billData.updatedAt.toDate().toISOString() : billData.updatedAt,
+    dueDate: billData.dueDate?.toDate?.() ? billData.dueDate.toDate().toISOString() : billData.dueDate,
+    lastPaymentDate: billData.lastPaymentDate?.toDate?.() ? billData.lastPaymentDate.toDate().toISOString() : billData.lastPaymentDate,
+    payments: billData.payments?.map(payment => ({
+      ...payment,
+      date: payment.date?.toDate?.() ? payment.date.toDate().toISOString() : payment.date
+    }))
+  };
+}
+
+// Process payment
+export const processPayment = (billId, paymentData) => async (dispatch, getState) => {
+  try {
+    dispatch(setLoading(true));
+    const { role, user } = getState().auth;
+    const billRef = doc(db, 'bills', billId);
+    const billDoc = await getDoc(billRef);
+    
+    if (!billDoc.exists()) {
+      dispatch(setError('Bill not found'));
+      return;
     }
 
     const currentBill = billDoc.data();
-    const paidAmount = parseFloat(currentBill.paidAmount || 0) + parseFloat(paymentData.amount);
-    const totalAmount = parseFloat(currentBill.totalAmount);
     
-    const status = paidAmount >= totalAmount ? 'paid' : 'partial';
-    
-    const updates = {
-      paidAmount,
-      status,
-      lastPaymentDate: new Date().toISOString(),
-      payments: [...(currentBill.payments || []), {
-        ...paymentData,
-        date: new Date().toISOString()
-      }],
-      updatedAt: new Date().toISOString()
-    };
+    // Check access permissions
+    let hasAccess = role === 'admin';
+    if (!hasAccess && role === 'facility_admin') {
+      const userFacilities = await getUserFacilities(user.uid);
+      hasAccess = userFacilities.includes(currentBill.facilityId);
+    }
 
-    await updateDoc(billRef, updates);
-    
-    const updatedBill = {
-      id: billId,
-      ...currentBill,
-      ...updates
-    };
-    
-    dispatch(updateBill(updatedBill));
-    return updatedBill;
+    if (hasAccess) {
+      const paidAmount = parseFloat(currentBill.paidAmount || 0) + parseFloat(paymentData.amount);
+      const totalAmount = parseFloat(currentBill.totalAmount);
+      
+      const status = paidAmount >= totalAmount ? 'paid' : 'partial';
+      
+      const updates = {
+        paidAmount,
+        status,
+        lastPaymentDate: new Date().toISOString(),
+        payments: [...(currentBill.payments || []), {
+          ...paymentData,
+          date: new Date().toISOString()
+        }],
+        updatedAt: new Date().toISOString()
+      };
+
+      await updateDoc(billRef, updates);
+      
+      const updatedBill = {
+        id: billId,
+        ...currentBill,
+        ...updates
+      };
+      
+      dispatch(updateBill(updatedBill));
+      return updatedBill;
+    } else {
+      dispatch(setError('Access denied: You do not have permission to process payments for this bill'));
+    }
   } catch (error) {
+    console.error('Error processing payment:', error);
     dispatch(setError(error.message));
     throw error;
+  } finally {
+    dispatch(setLoading(false));
   }
 };
+
+// Email bill
+export const emailBill = createAsyncThunk(
+  'billing/emailBill',
+  async (billId, { dispatch }) => {
+    try {
+      dispatch(emailBillStart());
+      
+      const functions = getFunctions();
+      const sendBillEmail = httpsCallable(functions, 'sendBillEmail');
+      
+      const result = await sendBillEmail({ billId });
+      dispatch(emailBillSuccess());
+      return result.data;
+    } catch (error) {
+      console.error('Error emailing bill:', error);
+      dispatch(emailBillFailure(error.message));
+      throw error;
+    }
+  }
+);

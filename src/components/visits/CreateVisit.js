@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { createVisit, fetchRecentVisits } from '../../redux/slices/visitsSlice';
+import { getAIInsights } from '../../services/aiService';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { 
@@ -34,6 +35,9 @@ const CreateVisit = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [symptomInput, setSymptomInput] = useState('');
   const [medicalRecords, setMedicalRecords] = useState([]);
+  const [aiSummary, setAiSummary] = useState('');
+  const [isLoadingAI, setIsLoadingAI] = useState(false);
+
   
   const [formData, setFormData] = useState({
     patientId,
@@ -72,10 +76,35 @@ const CreateVisit = () => {
     }
   });
 
+  // Effect for loading visits
   useEffect(() => {
-    dispatch(fetchRecentVisits(patientId));
-    
-    // Fetch medical records for the patient
+    const loadData = async () => {
+      await dispatch(fetchRecentVisits(patientId));
+    };
+    loadData();
+  }, [dispatch, patientId]);
+
+  // Effect for loading AI insights when recentVisits change
+  useEffect(() => {
+    const loadAIInsights = async () => {
+      if (recentVisits.length > 0) {
+        setIsLoadingAI(true);
+        try {
+          const dateOfBirth = recentVisits[0]?.patientDateOfBirth;
+          const insights = await getAIInsights(dateOfBirth, recentVisits);
+          setAiSummary(insights.analysis);
+        } catch (error) {
+          console.error('Error getting AI insights:', error);
+        } finally {
+          setIsLoadingAI(false);
+        }
+      }
+    };
+    loadAIInsights();
+  }, [recentVisits]);
+
+  // Effect for loading medical records
+  useEffect(() => {
     const fetchMedicalRecords = async () => {
       try {
         const recordsRef = collection(db, 'medical_records');
@@ -270,6 +299,7 @@ const CreateVisit = () => {
         <Tab label="Phone" />
         <Tab label="Medical History" />
         <Tab label="Prescriptions" />
+        <Tab label="AI Summary" />
       </Tabs>
       
       <Box sx={{ mt: 2 }}>
@@ -465,6 +495,41 @@ const CreateVisit = () => {
         )}
 
         {activeTab === 8 && (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="h6" gutterBottom>Prescriptions</Typography>
+            <PrescriptionForm
+              patientId={patientId}
+              onPrescriptionChange={(prescriptions) => 
+                setFormData(prev => ({ ...prev, prescriptions }))
+              }
+            />
+          </Box>
+        )}
+
+        {activeTab === 9 && (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="h6" gutterBottom>AI Summary of Patient's Past Visits</Typography>
+            {isLoadingAI ? (
+              <Typography color="textSecondary">Loading AI analysis...</Typography>
+            ) : aiSummary ? (
+              <TextField
+                fullWidth
+                multiline
+                rows={8}
+                margin="normal"
+                value={aiSummary}
+                InputProps={{
+                  readOnly: true,
+                }}
+                variant="outlined"
+              />
+            ) : (
+              <Typography color="textSecondary">No AI analysis available. This could be due to insufficient visit history.</Typography>
+            )}
+          </Box>
+        )}
+
+        {activeTab === 7 && (
           <Box sx={{ mt: 2 }}>
             <Typography variant="h6" gutterBottom>Prescriptions</Typography>
             <PrescriptionForm

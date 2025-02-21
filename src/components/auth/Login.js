@@ -114,6 +114,25 @@ const Login = () => {
           >
             {loading ? 'Logging in...' : 'Login'}
           </button>
+
+          <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+            <button
+              type="button"
+              onClick={() => navigate('/forgot-password')}
+              className="link-button"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#1976d2',
+                textDecoration: 'underline',
+                cursor: 'pointer',
+                padding: 0,
+                font: 'inherit'
+              }}
+            >
+              Forgot Password?
+            </button>
+          </div>
         </form>
       </div>
     </div>

@@ -195,18 +195,22 @@ const Layout = () => {
                     </ListItem>
                   </>
                 )}
-<ListItem component="div">
-                      <ListItemButton onClick={() => navigate('/admin/billing')} sx={{ pl: 4 }}>
-    <ListItemIcon>
-      <AssessmentIcon /> {/* You can choose an appropriate icon */}
-    </ListItemIcon>
-    <ListItemText primary="Billing" />
-  </ListItemButton>
-</ListItem>
               </List>
             </Collapse>
           </List>
         )}
+        <ListItem component="div">
+          <ListItemButton 
+            onClick={() => navigate('/billing')}
+            sx={drawerStyles.listItem}
+            selected={window.location.pathname === '/billing'}
+          >
+            <ListItemIcon>
+              <AssessmentIcon />
+            </ListItemIcon>
+            <ListItemText primary="Billing" />
+          </ListItemButton>
+        </ListItem>
         <ListItem component="div">
           <ListItemButton 
             onClick={handleLogout}
