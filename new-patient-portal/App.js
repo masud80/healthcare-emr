@@ -2,6 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 
 // Import screens
 import LoginScreen from './src/screens/LoginScreen';
@@ -38,13 +39,41 @@ const MainTabs = () => {
   );
 };
 
-export default function App() {
+const Navigation = () => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return null; // Or a loading spinner component
+  }
+
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="MainApp" component={MainTabs} />
+        {!user ? (
+          <Stack.Screen 
+            name="Login" 
+            component={LoginScreen}
+            options={{
+              headerShown: true,
+              title: 'Login',
+              headerStyle: {
+                backgroundColor: '#007AFF',
+              },
+              headerTintColor: '#fff',
+            }}
+          />
+        ) : (
+          <Stack.Screen name="MainApp" component={MainTabs} />
+        )}
       </Stack.Navigator>
     </NavigationContainer>
+  );
+};
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <Navigation />
+    </AuthProvider>
   );
 }
