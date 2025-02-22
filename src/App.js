@@ -26,10 +26,11 @@ import PrivateRoute from './components/auth/PrivateRoute';
 import PharmacyList from './components/pharmacy/PharmacyList';
 import CreatePharmacy from './components/pharmacy/CreatePharmacy';
 import DatabaseInitializer from './components/utils/DatabaseInitializer';
-  import MedicalRecords from './components/records/MedicalRecords';
+import MedicalRecords from './components/records/MedicalRecords';
 import AssignFacilityTest from './components/admin/AssignFacilityTest';
 import AuditReport from './components/audit/AuditReport';
 import './styles/components.css';
+import PatientPortal from './PatientPortal/App'; // Import Patient Portal App
 
 function App() {
   return (
@@ -39,6 +40,14 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            
+            {/* Patient Portal routes */}
+            <Route path="/patient/*" element={
+              <PrivateRoute requirePatient={true}>
+                <Navigate to="/PatientPortal" />
+              </PrivateRoute>
+            } />
+            
             <Route path="/" element={<Layout />}>
               <Route index element={<Navigate to="/dashboard" />} />
               
