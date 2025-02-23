@@ -1,46 +1,30 @@
-import React, { useEffect } from 'react';
-import { Navigate, Outlet, useNavigate } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { selectUser, selectLoading, selectRole } from '../../redux/slices/authSlice';
-import '../../styles/components.css';
+import { selectUser, selectRole, selectLoading } from '../../redux/slices/authSlice';
 
-const PrivateRoute = ({ requireAdmin, requireFacilityAdmin }) => {
+const PrivateRoute = ({ requireAdmin = false, requireFacilityAdmin = false }) => {
   const user = useSelector(selectUser);
   const role = useSelector(selectRole);
   const loading = useSelector(selectLoading);
-  const navigate = useNavigate();
-  
-  console.log('Current User:', user);
-  console.log('User Role:', role);
-
-  useEffect(() => {
-    // Check if auth is initialized
-    if (!loading && !user) {
-      console.log('No user found, redirecting to login');
-      navigate('/login', { replace: true });
-    }
-  }, [user, loading, navigate]);
 
   if (loading) {
-    return (
-      <div className="container">
-        <div className="loading-spinner">
-          <p>Loading...</p>
-        </div>
-      </div>
-    );
+    return <div>Loading...</div>;
   }
 
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  if (requireAdmin && role !== 'admin') {
-    return <Navigate to="/dashboard" replace />;
-  }
+  // Check if the route requires specific roles
+  if (requireAdmin || requireFacilityAdmin) {
+    const hasRequiredRole = (
+      (requireAdmin && role === 'admin') ||
+      (requireFacilityAdmin && role === 'facility_admin')
+    );
 
-  if (requireFacilityAdmin && role !== 'facility_admin' && role !== 'admin') {
-    return <Navigate to="/dashboard" replace />;
+    if (!hasRequiredRole) {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   return <Outlet />;

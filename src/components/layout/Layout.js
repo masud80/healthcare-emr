@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { selectUser, selectRole } from '../../redux/slices/authSlice';
@@ -33,6 +33,8 @@ import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../firebase/config';
+import { getDocs, query, collection, where, limit, getDoc, doc } from 'firebase/firestore';
+import { db } from '../../firebase/config';
 
 const drawerWidth = 240;
 
@@ -71,6 +73,37 @@ const Layout = () => {
   const navigate = useNavigate();
   const user = useSelector(selectUser);
   const role = useSelector(selectRole);
+  const [facilityBranding, setFacilityBranding] = useState(null);
+
+  useEffect(() => {
+    const fetchFacilityBranding = async () => {
+      if (!user) return;
+
+      try {
+        // Get user's current facility
+        const userFacilityDoc = await getDocs(
+          query(
+            collection(db, 'user_facilities'),
+            where('userId', '==', user.uid),
+            limit(1)
+          )
+        );
+
+        if (!userFacilityDoc.empty) {
+          const facilityId = userFacilityDoc.docs[0].data().facilityId;
+          const facilityDoc = await getDoc(doc(db, 'facilities', facilityId));
+          
+          if (facilityDoc.exists() && facilityDoc.data().branding) {
+            setFacilityBranding(facilityDoc.data().branding);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching facility branding:', error);
+      }
+    };
+
+    fetchFacilityBranding();
+  }, [user]);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -143,20 +176,19 @@ const Layout = () => {
             <ListItemText primary="Appointments" />
           </ListItemButton>
         </ListItem>
-        {(role === 'admin' || role === 'facility_admin') && (
-          <ListItem component="div">
-            <ListItemButton 
-              onClick={() => navigate('/facilities')}
-              sx={drawerStyles.listItem}
-              selected={window.location.pathname === '/facilities'}
-            >
-              <ListItemIcon>
-                <BusinessIcon />
-              </ListItemIcon>
-              <ListItemText primary="Facilities" />
-            </ListItemButton>
-          </ListItem>
-        )}
+        {/* Facilities menu item - visible to admin and facility_admin */}
+        <ListItem component="div">
+          <ListItemButton 
+            onClick={() => navigate('/facilities')}
+            sx={drawerStyles.listItem}
+            selected={window.location.pathname === '/facilities'}
+          >
+            <ListItemIcon>
+              <BusinessIcon />
+            </ListItemIcon>
+            <ListItemText primary="Facilities" />
+          </ListItemButton>
+        </ListItem>
         {(role === 'admin' || role === 'facility_admin') && (
           <List component="div" disablePadding>
             <ListItem component="div">
@@ -256,6 +288,8 @@ const Layout = () => {
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
+          backgroundColor: facilityBranding?.ribbonColor || '#1976d2',
+          zIndex: (theme) => theme.zIndex.drawer + 1
         }}
       >
         <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -269,10 +303,24 @@ const Layout = () => {
             >
               <MenuIcon />
             </IconButton>
-            <Typography variant="h6" noWrap component="div">
-              Healthcare EMR
-            </Typography>
+            <Box>
+              <Typography variant="h6" noWrap component="div">
+                Healthcare EMR
+              </Typography>
+              {facilityBranding?.facilityName && (
+                <Typography variant="subtitle2" noWrap component="div">
+                  {facilityBranding.facilityName}
+                </Typography>
+              )}
+            </Box>
           </Box>
+          {facilityBranding?.logoUrl && (
+            <img 
+              src={facilityBranding.logoUrl} 
+              alt="Facility Logo" 
+              style={{ height: 40, marginRight: 16 }}
+            />
+          )}
           <Box sx={{ flex: 2, display: 'flex', justifyContent: 'center' }}>
             <GlobalSearch />
           </Box>

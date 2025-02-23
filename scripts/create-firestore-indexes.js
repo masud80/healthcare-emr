@@ -10,29 +10,81 @@ if (!admin.apps.length) {
 
 async function createIndexes() {
   try {
-    // Get the Firestore instance
     const db = admin.firestore();
-
-    // Create the composite index for patients collection
-    const collectionGroup = db.collection('patients');
     
-    // Define the index fields
-    const index = {
-      collectionGroup: 'patients',
-      queryScope: 'COLLECTION',
-      fields: [
-        { fieldPath: 'facilityId', order: 'ASCENDING' },
-        { fieldPath: 'name', order: 'ASCENDING' }
-      ]
-    };
+    // Indexes for patients collection
+    const patientsIndexes = [
+      {
+        collectionGroup: 'patients',
+        queryScope: 'COLLECTION',
+        fields: [
+          { fieldPath: 'facilityId', order: 'ASCENDING' },
+          { fieldPath: 'createdAt', order: 'DESCENDING' }
+        ]
+      },
+      {
+        collectionGroup: 'patients',
+        queryScope: 'COLLECTION',
+        fields: [
+          { fieldPath: 'doctorId', order: 'ASCENDING' },
+          { fieldPath: 'createdAt', order: 'DESCENDING' }
+        ]
+      }
+    ];
 
-    // Create the index
-    console.log('Creating composite index for patients collection...');
-    await db.collection('patients').doc('_ignored_').collection('_ignored_').doc().set({});
-    await admin.firestore().listIndexes();
+    // Indexes for appointments collection
+    const appointmentsIndexes = [
+      {
+        collectionGroup: 'appointments',
+        queryScope: 'COLLECTION',
+        fields: [
+          { fieldPath: 'facilityId', order: 'ASCENDING' },
+          { fieldPath: 'date', order: 'ASCENDING' }
+        ]
+      },
+      {
+        collectionGroup: 'appointments',
+        queryScope: 'COLLECTION',
+        fields: [
+          { fieldPath: 'doctorId', order: 'ASCENDING' },
+          { fieldPath: 'date', order: 'ASCENDING' }
+        ]
+      }
+    ];
+
+    // Create all indexes
+    const allIndexes = [...patientsIndexes, ...appointmentsIndexes];
     
-    console.log('Index creation initiated. The index will be ready in a few minutes.');
-    console.log('You can monitor index creation progress in the Firebase Console.');
+    console.log('Creating composite indexes...');
+    
+    for (const index of allIndexes) {
+      try {
+        // Use the correct method to create indexes
+        await db.collection(index.collectionGroup)
+          .where(index.fields[0].fieldPath, '>=', '')
+          .orderBy(index.fields[0].fieldPath, index.fields[0].order === 'ASCENDING' ? 'asc' : 'desc')
+          .orderBy(index.fields[1].fieldPath, index.fields[1].order === 'ASCENDING' ? 'asc' : 'desc')
+          .limit(1)
+          .get();
+        
+        console.log(`Index creation triggered for ${index.collectionGroup}:`, 
+          index.fields.map(f => `${f.fieldPath} ${f.order}`).join(', '));
+      } catch (error) {
+        if (error.code === 'failed-precondition') {
+          console.log(`Index needed for ${index.collectionGroup}. Please create it using this URL:`);
+          console.log(error.message.split('https://')[1]);
+        } else {
+          console.error(`Error creating index for ${index.collectionGroup}:`, error);
+        }
+      }
+    }
+
+    console.log('\nTo create the required indexes:');
+    console.log('1. Copy the URLs printed above');
+    console.log('2. Open them in your browser');
+    console.log('3. Click "Create index" in the Firebase Console');
+    console.log('\nAlternatively, you can deploy indexes using the firestore.indexes.json file:');
+    console.log('firebase deploy --only firestore:indexes');
 
   } catch (error) {
     console.error('Error creating indexes:', error);
@@ -42,7 +94,7 @@ async function createIndexes() {
 // Run the index creation
 createIndexes()
   .then(() => {
-    console.log('Index creation process completed');
+    console.log('\nIndex creation process completed');
     process.exit(0);
   })
   .catch(error => {

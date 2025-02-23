@@ -35,15 +35,17 @@ const Login = () => {
         console.log('User data:', firestoreData);
         console.log('Token claims:', idTokenResult.claims);
         
-        // Determine role
-        const role = idTokenResult.claims.admin === true ? 'admin' : firestoreData.role || 'user';
+        // Determine role - check both claims and Firestore data
+        const role = idTokenResult.claims.admin === true ? 'admin' : 
+                     firestoreData.role || 'user';
+        
         console.log('Determined role:', role);
         
         // Create minimal serializable user data
         const userData = {
           uid: userCredential.user.uid,
           email: userCredential.user.email,
-          role: role
+          role: role  // Make sure role is included here
         };
 
         // Update Redux state using action creator
@@ -53,18 +55,8 @@ const Login = () => {
         setError('User data not found');
       }
     } catch (error) {
-      console.error('Login error details:', {
-        code: error.code,
-        message: error.message,
-        fullError: error
-      });
-      if (error.code === 'auth/invalid-credential') {
-        setError('Invalid email or password');
-      } else if (error.code === 'auth/user-not-found') {
-        setError('User not found');
-      } else {
-        setError(`Login failed: ${error.message}`);
-      }
+      console.error('Login error:', error);
+      setError(error.message);
     } finally {
       setLoading(false);
     }

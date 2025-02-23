@@ -1,7 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { useSelector } from 'react-redux';
+import { 
+  collection, 
+  getDocs, 
+  query, 
+  orderBy, 
+  limit, 
+  where,
+  doc,
+  getDoc 
+} from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { selectUser, selectRole } from '../redux/slices/authSlice';
 import '../styles/components.css';
 
 const Dashboard = () => {
@@ -9,6 +20,10 @@ const Dashboard = () => {
   const [recentPatients, setRecentPatients] = useState([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  const user = useSelector(selectUser);
+  const role = useSelector(selectRole);
 
   const formatDate = (timestamp) => {
     if (!timestamp) return 'N/A';
@@ -23,54 +38,123 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    const fetchRecentPatients = async () => {
+    const fetchUserFacilities = async () => {
       try {
-        const patientsRef = collection(db, 'patients');
-        const q = query(patientsRef, orderBy('createdAt', 'desc'), limit(5));
-        const querySnapshot = await getDocs(q);
-        const patientsList = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setRecentPatients(patientsList);
+        const facilityUsersRef = doc(db, 'facilityUsers', user.uid);
+        const facilityUsersDoc = await getDoc(facilityUsersRef);
+        return facilityUsersDoc.exists() ? facilityUsersDoc.data().facilities : [];
       } catch (error) {
-        console.error('Error fetching recent patients:', error);
+        console.error('Error fetching user facilities:', error);
+        return [];
       }
     };
 
-    const fetchUpcomingAppointments = async () => {
+    const fetchRecentPatients = async (userFacilities) => {
       try {
-        const appointmentsRef = collection(db, 'appointments');
-        const q = query(
-          appointmentsRef,
-          orderBy('date', 'asc'),
-          limit(5)
-        );
+        const patientsRef = collection(db, 'patients');
+        let q;
+
+        if (role === 'admin') {
+          q = query(patientsRef, orderBy('createdAt', 'desc'), limit(5));
+        } else if (role === 'facility_admin' && userFacilities.length > 0) {
+          // Temporarily simplify query while index is building
+          q = query(
+            patientsRef,
+            where('facilityId', 'in', userFacilities),
+            limit(5)
+          );
+        } else {
+          // Temporarily simplify query while index is building
+          q = query(
+            patientsRef,
+            where('doctorId', '==', user.uid),
+            limit(5)
+          );
+        }
+
         const querySnapshot = await getDocs(q);
-        const appointmentsList = querySnapshot.docs.map(doc => ({
+        return querySnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
-        setUpcomingAppointments(appointmentsList);
+      } catch (error) {
+        console.error('Error fetching recent patients:', error);
+        if (error.message.includes('requires an index')) {
+          return []; // Return empty array while index is building
+        }
+        throw error;
+      }
+    };
+
+    const fetchUpcomingAppointments = async (userFacilities) => {
+      try {
+        const appointmentsRef = collection(db, 'appointments');
+        let q;
+
+        if (role === 'admin') {
+          q = query(
+            appointmentsRef,
+            where('date', '>=', new Date()),
+            orderBy('date', 'asc'),
+            limit(5)
+          );
+        } else if (role === 'facility_admin' && userFacilities.length > 0) {
+          q = query(
+            appointmentsRef,
+            where('facilityId', 'in', userFacilities),
+            where('date', '>=', new Date()),
+            orderBy('date', 'asc'),
+            limit(5)
+          );
+        } else {
+          q = query(
+            appointmentsRef,
+            where('doctorId', '==', user.uid),
+            where('date', '>=', new Date()),
+            orderBy('date', 'asc'),
+            limit(5)
+          );
+        }
+
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
       } catch (error) {
         console.error('Error fetching upcoming appointments:', error);
+        throw error;
       }
     };
 
     const fetchAllData = async () => {
       setLoading(true);
-      await Promise.all([
-        fetchRecentPatients(),
-        fetchUpcomingAppointments()
-      ]);
-      setLoading(false);
+      setError(null);
+      try {
+        const userFacilities = await fetchUserFacilities();
+        const [patients, appointments] = await Promise.all([
+          fetchRecentPatients(userFacilities),
+          fetchUpcomingAppointments(userFacilities)
+        ]);
+        setRecentPatients(patients);
+        setUpcomingAppointments(appointments);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        setError('Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchAllData();
-  }, []);
+  }, [user, role]);
 
   if (loading) {
     return <div className="container"><p>Loading dashboard data...</p></div>;
+  }
+
+  if (error) {
+    return <div className="container"><p className="error">{error}</p></div>;
   }
 
   return (

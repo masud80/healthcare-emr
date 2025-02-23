@@ -6,7 +6,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from './firebase/config';
 import store from './redux/store';
-import { setUser, setLoading } from './redux/slices/authSlice';
+import { setUser, setLoading, setRole, setError } from './redux/slices/authSlice';
 
 const container = document.getElementById('root'); 
 
@@ -23,21 +23,29 @@ onAuthStateChanged(auth, async (user) => {
       
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       if (userDoc.exists()) {
+        const firestoreData = userDoc.data();
+        
+        // Determine role from both claims and Firestore data
+        const role = idTokenResult.claims.admin === true ? 'admin' : 
+                     firestoreData.role || 'user';
+
         store.dispatch(setUser({
           uid: user.uid,
-          email: user.email,
-          role: idTokenResult.claims.admin ? 'admin' : (userDoc.data().role || 'user')
+          email: user.email
         }));
-      } else {
-        store.dispatch(setUser(null));
+        
+        // Explicitly dispatch role
+        store.dispatch(setRole(role));
       }
     } else {
+      // Clear auth state when user logs out
       store.dispatch(setUser(null));
+      store.dispatch(setRole(null));
     }
+    store.dispatch(setLoading(false));
   } catch (error) {
-    console.error('Error during authentication:', error);
-    store.dispatch(setUser(null));
-  } finally {
+    console.error('Auth state change error:', error);
+    store.dispatch(setError(error.message));
     store.dispatch(setLoading(false));
   }
 });

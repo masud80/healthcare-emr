@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { signInWithEmailAndPassword } from '@firebase/auth';
 import { auth } from '../firebase/config';
+import { getFirestore, doc, getDoc } from '@firebase/firestore';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
@@ -16,10 +17,30 @@ const LoginScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Get the user's patient document
+      const db = getFirestore();
+      const patientDoc = await getDoc(doc(db, 'patients', userCredential.user.uid));
+      
+      if (!patientDoc.exists()) {
+        throw new Error('Access denied: Not a patient account');
+      }
+
+      const patientData = patientDoc.data();
+      if (!patientData.isPatientPortalEnabled) {
+        throw new Error('Patient portal access not enabled. Please contact your healthcare provider.');
+      }
+
       navigation.navigate('MainApp');
     } catch (error) {
-      Alert.alert('Error', error.message);
+      let errorMessage = 'Invalid login credentials';
+      if (error.message.includes('Patient portal access not enabled')) {
+        errorMessage = error.message;
+      } else if (error.message.includes('Not a patient account')) {
+        errorMessage = 'This application is only for patient access';
+      }
+      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }

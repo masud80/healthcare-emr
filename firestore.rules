@@ -5,53 +5,39 @@ service cloud.firestore {
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
     function isAdmin() {
-      return isAuthenticated() && (
-        request.auth.token.admin == true ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
-      );
+      return request.auth.token.admin == true || 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     function isFacilityAdmin() {
-      return isAuthenticated() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'facility_admin';
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'facility_admin';
     }
 
     function hasUserFacilityAccess(facilityId) {
-      let docId = request.auth.uid + '_' + facilityId;
-      return exists(/databases/$(database)/documents/user_facilities/$(docId));
+      return exists(/databases/$(database)/documents/facilityUsers/$(request.auth.uid)) &&
+        facilityId in get(/databases/$(database)/documents/facilityUsers/$(request.auth.uid)).data.facilities;
     }
 
-    // Bills collection
-    match /bills/{billId} {
-      allow read: if isAuthenticated() && (
-        isAdmin() || (isFacilityAdmin() &&
-        resource.data.facilityId != null &&
-        hasUserFacilityAccess(resource.data.facilityId))
-      );
-      allow write: if isAuthenticated() && (
-        isAdmin() || (isFacilityAdmin() &&
-        resource.data.facilityId != null &&
-        hasUserFacilityAccess(resource.data.facilityId))
-      );
+    // Function to check if the user is a patient with portal access
+    function isPatientWithPortalAccess() {
+      return exists(/databases/$(database)/documents/patients/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/patients/$(request.auth.uid)).data.isPatientPortalEnabled == true;
     }
 
-    // Users collection
-    match /users/{userId} {
-      allow read: if isAuthenticated() && (
-        request.auth.uid == userId || // Allow users to read their own profile
-        isAdmin()                     // Admins can read any profile
-      );
-      allow update: if isAuthenticated() && (
-        request.auth.uid == userId && // Allow users to update their own profile
-        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) || // Prevent users from changing their role
-        isAdmin()                     // Admins can update any profile
-      );
-      // Keep existing write rule for admin-only creation
-      allow create, delete: if isAdmin();
+    // Facilities collection
+    match /facilities/{facilityId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow delete: if isAdmin();
+      allow update: if 
+        isAuthenticated() && (
+          isAdmin() ||
+          (isFacilityAdmin() && 
+           isFacilityAdminFor(facilityId) &&
+           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['branding']))
+        );
     }
 
     // User Facilities collection
@@ -60,10 +46,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Facilities collection
-    match /facilities/{facilityId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
+    // Users collection - needed for role checks
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId || 
+        isAdmin()
+      );
     }
 
     // Patients collection
@@ -77,10 +65,26 @@ service cloud.firestore {
             || request.auth.token.role == 'admin');
     }
 
+    // Patient data access
+    match /patients/{patientId} {
+      allow read: if request.auth.uid == patientId && isPatientWithPortalAccess();
+    }
+
     // Visits collection
     match /visits/{visitId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin() || isFacilityAdmin();
+    }
+
+    // Other collections that patients should access
+    match /appointments/{appointmentId} {
+      allow read: if isPatientWithPortalAccess() && 
+        resource.data.patientId == request.auth.uid;
+    }
+
+    match /visits/{visitId} {
+      allow read: if isPatientWithPortalAccess() && 
+        resource.data.patientId == request.auth.uid;
     }
 
     // Prescriptions collection
@@ -101,29 +105,17 @@ service cloud.firestore {
     match /appointments/{appointmentId} {
       allow read: if isAuthenticated() && (
         isAdmin() ||
-        (request.auth.uid == resource.data.doctorId) ||
-        (request.auth.uid == resource.data.patientId) ||
+        isFacilityAdmin() ||
+        request.auth.uid == resource.data.doctorId ||
+        request.auth.uid == resource.data.patientId ||
         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'nurse' &&
-         resource.data.facilityId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.facilityId)
+         hasUserFacilityAccess(resource.data.facilityId))
       );
-      allow create: if isAuthenticated() && (
+      
+      allow write: if isAuthenticated() && (
         isAdmin() ||
-        (request.auth.uid == request.resource.data.doctorId) ||
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'nurse' &&
-         request.resource.data.facilityId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.facilityId)
-      );
-      allow update: if isAuthenticated() && (
-        isAdmin() ||
-        (request.auth.uid == resource.data.doctorId && request.auth.uid == request.resource.data.doctorId) ||
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'nurse' &&
-         resource.data.facilityId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.facilityId &&
-         request.resource.data.facilityId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.facilityId)
-      );
-      allow delete: if isAuthenticated() && (
-        isAdmin() ||
-        (request.auth.uid == resource.data.doctorId) ||
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'nurse' &&
-         resource.data.facilityId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.facilityId)
+        isFacilityAdmin() ||
+        request.auth.uid == resource.data.doctorId
       );
     }
 
