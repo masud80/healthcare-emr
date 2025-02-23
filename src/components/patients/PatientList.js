@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '../../firebase/config';
 import { fetchUserFacilities } from '../../redux/thunks/facilitiesThunks';
 import { DataGrid } from '@mui/x-data-grid';
-import { Button, Paper, TextField, Box, Typography, CircularProgress } from '@mui/material';
+import { Button, Paper, TextField, Box, Typography, CircularProgress, Checkbox } from '@mui/material';
 import '../../styles/components.css';
 
 const PatientList = () => {
@@ -70,7 +71,8 @@ const PatientList = () => {
             contact: data.contact || 'N/A',
             email: data.email || 'N/A',
             bloodType: data.bloodType || 'N/A',
-            facilityId: data.facilityId || ''
+            facilityId: data.facilityId || '',
+            isPatientPortalEnabled: data.isPatientPortalEnabled || false
           };
         });
 
@@ -86,6 +88,44 @@ const PatientList = () => {
 
     fetchPatients();
   }, [userFacilities, role]);
+
+  const handlePatientPortalToggle = async (patientId, newValue) => {
+    try {
+      // Only send email when enabling the portal
+      if (newValue) {
+        const patient = patients.find(p => p.id === patientId);
+        if (!patient?.email) {
+          throw new Error('Patient email is required for portal access');
+        }
+
+        // Call Firebase Function to send registration email
+        const functions = getFunctions();
+        const sendPatientRegistrationEmail = httpsCallable(functions, 'sendPatientRegistrationEmail');
+        
+        await sendPatientRegistrationEmail({
+          patientId,
+          email: patient.email,
+          name: patient.name
+        });
+      }
+
+      // Update Firestore
+      await updateDoc(doc(db, 'patients', patientId), {
+        isPatientPortalEnabled: newValue
+      });
+      
+      // Update local state
+      setPatients(patients.map(patient => 
+        patient.id === patientId 
+          ? { ...patient, isPatientPortalEnabled: newValue }
+          : patient
+      ));
+
+    } catch (error) {
+      console.error('Error updating patient portal access:', error);
+      // You might want to add a proper error notification here
+    }
+  };
 
   const columns = [
     { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
@@ -108,6 +148,18 @@ const PatientList = () => {
         >
           View Details
         </Button>
+      ),
+    },
+    {
+      field: 'isPatientPortalEnabled',
+      headerName: 'Enable Patient Portal',
+      width: 160,
+      renderCell: (params) => (
+        <Checkbox
+          checked={params.row.isPatientPortalEnabled || false}
+          onChange={(event) => handlePatientPortalToggle(params.row.id, event.target.checked)}
+          disabled={role !== 'admin'} // Only admin can toggle this
+        />
       ),
     },
   ];

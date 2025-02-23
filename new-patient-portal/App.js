@@ -11,6 +11,7 @@ import AppointmentsScreen from './src/screens/AppointmentsScreen';
 import VisitsScreen from './src/screens/VisitsScreen';
 import LabResultsScreen from './src/screens/LabResultsScreen';
 import PaymentsScreen from './src/screens/PaymentsScreen';
+import MyAccountScreen from './src/screens/MyAccountScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -35,6 +36,7 @@ const MainTabs = () => {
       <Tab.Screen name="Visits" component={VisitsScreen} />
       <Tab.Screen name="Lab Results" component={LabResultsScreen} />
       <Tab.Screen name="Payments" component={PaymentsScreen} />
+      <Tab.Screen name="Account" component={MyAccountScreen} />
     </Tab.Navigator>
   );
 };

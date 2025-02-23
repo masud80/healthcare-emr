@@ -41,8 +41,17 @@ service cloud.firestore {
 
     // Users collection
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin() || request.auth.uid == userId;
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId || // Allow users to read their own profile
+        isAdmin()                     // Admins can read any profile
+      );
+      allow update: if isAuthenticated() && (
+        request.auth.uid == userId && // Allow users to update their own profile
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) || // Prevent users from changing their role
+        isAdmin()                     // Admins can update any profile
+      );
+      // Keep existing write rule for admin-only creation
+      allow create, delete: if isAdmin();
     }
 
     // User Facilities collection
@@ -61,6 +70,11 @@ service cloud.firestore {
     match /patients/{patientId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin() || isFacilityAdmin();
+      allow update: if request.auth != null 
+        && request.auth.token.role in ['admin', 'doctor']
+        && (!request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['isPatientPortalEnabled']) 
+            || request.auth.token.role == 'admin');
     }
 
     // Visits collection

@@ -29,8 +29,8 @@ import DatabaseInitializer from './components/utils/DatabaseInitializer';
 import MedicalRecords from './components/records/MedicalRecords';
 import AssignFacilityTest from './components/admin/AssignFacilityTest';
 import AuditReport from './components/audit/AuditReport';
+import MyAccount from './components/account/MyAccount.jsx';
 import './styles/components.css';
-import PatientPortal from './PatientPortal/App'; // Import Patient Portal App
 
 function App() {
   return (
@@ -41,11 +41,9 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             
-            {/* Patient Portal routes */}
+            {/* Update Patient Portal route to show a message or redirect */}
             <Route path="/patient/*" element={
-              <PrivateRoute requirePatient={true}>
-                <Navigate to="/PatientPortal" />
-              </PrivateRoute>
+              <Navigate to="/login" replace /> // Or replace with a component that shows mobile app info
             } />
             
             <Route path="/" element={<Layout />}>
@@ -64,6 +62,7 @@ function App() {
                 <Route path="appointments/new" element={<CreateAppointment />} />
                 <Route path="appointments/:id" element={<AppointmentDetails />} />
                 <Route path="facilities" element={<FacilityList />} />
+                <Route path="my-account" element={<MyAccount />} /> {/* Move MyAccount route here */}
                 <Route element={<PrivateRoute requireFacilityAdmin={true} />}>
                   <Route path="facilities/new" element={<CreateFacility />} />
                 </Route>
@@ -90,6 +89,8 @@ function App() {
                 <Route path="billing/:billId" element={<BillDetails />} />
               </Route>
             </Route>
+            {/* Remove the standalone my-account route */}
+            {/* <Route path="my-account" element={<MyAccount />} /> */}
           </Routes>
         </Router>
       </LocalizationProvider>

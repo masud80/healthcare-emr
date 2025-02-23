@@ -211,6 +211,20 @@ const Layout = () => {
             <ListItemText primary="Billing" />
           </ListItemButton>
         </ListItem>
+        {user && ( // Only show My Account link for logged-in users
+          <ListItem component="div">
+            <ListItemButton 
+              onClick={() => navigate('/my-account')}
+              sx={drawerStyles.listItem}
+              selected={window.location.pathname === '/my-account'}
+            >
+              <ListItemIcon>
+                <PersonIcon />
+              </ListItemIcon>
+              <ListItemText primary="My Account" />
+            </ListItemButton>
+          </ListItem>
+        )}
         <ListItem component="div">
           <ListItemButton 
             onClick={handleLogout}
