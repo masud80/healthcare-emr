@@ -33,3 +33,11 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Android webp resources
+android/app/src/main/res/**/ic_launcher.webp
+android/app/src/main/res/**/ic_launcher_round.webp
+android/app/src/main/res/**/ic_launcher_foreground.webp
+
+# Alternative: ignore all webp files in mipmap directories
+android/app/src/main/res/mipmap-*/**.webp

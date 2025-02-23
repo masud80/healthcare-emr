@@ -131,6 +131,22 @@ android {
             withJavadocJar()
         }
     }
+
+    buildFeatures {
+        compose = true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.14"
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+        freeCompilerArgs += [
+            "-Xjvm-default=all",
+            "-Xopt-in=kotlin.RequiresOptIn"
+        ]
+    }
 }
 
 // Apply static values from `gradle.properties` to the `android.packagingOptions`

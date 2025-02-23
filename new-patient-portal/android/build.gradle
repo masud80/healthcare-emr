@@ -3,12 +3,17 @@
 buildscript {
     ext {
         buildToolsVersion = "35.0.0"
-        minSdkVersion = 21
+        minSdkVersion = 24
         compileSdkVersion = 35
         targetSdkVersion = 35
-        kotlinVersion = "1.8.0"
+        kotlinVersion = "1.9.25"
+        // Add compose compiler version compatible with Kotlin 1.9.24
+        composeCompilerVersion = "1.5.15"
         // We use NDK 23 which has both M1 support and is the side-by-side NDK version from AGP.
-        ndkVersion = "23.1.7779620"
+        ndkVersion = "26.1.10909125"
+        androidXAnnotation = "1.6.0"
+        androidXBrowser = "1.5.0"
+        kotlinCompilerExtensionVersion = "1.5.15"
     }
     repositories {
         google()
@@ -38,7 +43,37 @@ subprojects { subproject ->
     }
 }
 
+// Add this block after the buildscript block
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty("android")) {
+            android {
+                composeOptions {
+                    kotlinCompilerExtensionVersion = rootProject.ext.composeCompilerVersion
+                }
+            }
+        }
+    }
+}
+
 allprojects {
+    def kotlin_version = rootProject.ext.kotlinVersion
+    
+    configurations.all {
+        resolutionStrategy {
+            force "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+            force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+            force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+            force "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+            
+            eachDependency { DependencyResolveDetails details ->
+                if (details.requested.group == 'org.jetbrains.kotlin') {
+                    details.useVersion kotlin_version
+                }
+            }
+        }
+    }
+    
     repositories {
         maven {
             // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
