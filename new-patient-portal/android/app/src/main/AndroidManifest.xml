@@ -28,14 +28,6 @@
         <data android:scheme="com.anonymous.newpatientportal"/>
         <data android:scheme="exp+new-patient-portal"/>
       </intent-filter>
-      <intent-filter android:autoVerify="true">
-        <action android:name="android.intent.action.VIEW"/>
-        <category android:name="android.intent.category.DEFAULT"/>
-        <category android:name="android.intent.category.BROWSABLE"/>
-        <data android:scheme="exp"/>
-        <data android:host="new-patient-portal"/>
-        <data android:pathPattern="/.*"/>
-      </intent-filter>
     </activity>
   </application>
 </manifest>

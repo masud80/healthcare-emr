@@ -1,7 +1,7 @@
 {
   "name": "new-patient-portal",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "node_modules/expo/AppEntry.js",
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
@@ -29,7 +29,9 @@
     "react-native-screens": "~4.4.0",
     "react-native-web": "~0.19.10",
     "expo-updates": "~0.27.1",
-    "expo-dev-client": "~5.0.12"
+    "expo-dev-client": "~5.0.12",
+    "expo-system-ui": "~2.9.3",
+    "@react-native-community/netinfo": "latest"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

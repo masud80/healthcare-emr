@@ -2,28 +2,51 @@ import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ReminderService } from './src/services/ReminderService';
-// ... other imports
-
-// Import your screens
-import MainApp from './src/screens/MainApp'; // Make sure this file exists
+import { AuthProvider, useAuth } from './src/context/AuthContext';
+import LoginScreen from './src/screens/LoginScreen';
+import MainApp from './src/screens/MainApp';
 
 const Stack = createNativeStackNavigator();
 
+function Navigation() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return null; // Or a loading spinner component
+  }
+
+  return (
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {!user ? (
+          <Stack.Screen 
+            name="Login" 
+            component={LoginScreen}
+            options={{
+              headerShown: true,
+              title: 'Login',
+              headerStyle: {
+                backgroundColor: '#007AFF',
+              },
+              headerTintColor: '#fff',
+            }}
+          />
+        ) : (
+          <Stack.Screen name="MainApp" component={MainApp} />
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+
 export default function App() {
   useEffect(() => {
-    // Request notification permissions when app starts
     ReminderService.getInstance().requestNotificationPermission();
   }, []);
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator>
-        <Stack.Screen 
-          name="MainApp" 
-          component={MainApp}
-          options={{ title: 'Patient Portal' }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <AuthProvider>
+      <Navigation />
+    </AuthProvider>
   );
 } 
