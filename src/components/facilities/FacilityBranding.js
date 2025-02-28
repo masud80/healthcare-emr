@@ -151,7 +151,7 @@ const FacilityBranding = () => {
                   ...prev,
                   facilityName: e.target.value
                 }))}
-                helperText="This will appear under 'Healthcare EMR'"
+                helperText="This will appear under 'QuantumLeap EMR'"
               />
             </Grid>
 

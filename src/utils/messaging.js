@@ -28,7 +28,7 @@ export const updateThreadParticipants = async (threadId, newParticipant) => {
   }
 };
 
-export const createThread = async (participants) => {
+export const createThread = async (participants, subject) => {
   try {
     // Validate participant data
     if (!participants || !Array.isArray(participants) || participants.length === 0) {
@@ -55,7 +55,7 @@ export const createThread = async (participants) => {
     });
 
     const threadRef = await addDoc(collection(db, 'messageThreads'), {
-      subject: 'New Thread',
+      subject: subject || 'New Thread',
       participants: formattedParticipants.map(p => p.id), // Store only participant IDs
       participantDetails: formattedParticipants, // Store full participant details
       createdAt: serverTimestamp(),

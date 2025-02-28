@@ -1,29 +1,35 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import { 
-  collection, 
-  getDocs, 
-  query, 
-  orderBy, 
-  limit, 
-  where,
-  doc,
-  getDoc 
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { useSelector, useDispatch } from 'react-redux';
 import { selectUser, selectRole } from '../redux/slices/authSlice';
+import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import { db } from '../firebase/config';
+import { fetchUserFacilities } from '../redux/thunks/facilitiesThunks';
 import '../styles/components.css';
+import {
+  LocalHospital as HospitalIcon,
+  Person as PersonIcon,
+  Event as EventIcon,
+  Add as AddIcon,
+  CalendarToday as CalendarIcon,
+  TrendingUp as TrendingUpIcon,
+  AccessTime as TimeIcon
+} from '@mui/icons-material';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const user = useSelector(selectUser);
+  const role = useSelector(selectRole);
   const [recentPatients, setRecentPatients] = useState([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  const user = useSelector(selectUser);
-  const role = useSelector(selectRole);
+  const [stats, setStats] = useState({
+    totalPatients: 0,
+    todayAppointments: 0,
+    activePatients: 0
+  });
 
   const formatDate = (timestamp) => {
     if (!timestamp) return 'N/A';
@@ -38,14 +44,58 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    const fetchUserFacilities = async () => {
+    const fetchStats = async (userFacilities) => {
       try {
-        const facilityUsersRef = doc(db, 'facilityUsers', user.uid);
-        const facilityUsersDoc = await getDoc(facilityUsersRef);
-        return facilityUsersDoc.exists() ? facilityUsersDoc.data().facilities : [];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const patientsRef = collection(db, 'patients');
+        const appointmentsRef = collection(db, 'appointments');
+
+        let patientsQuery, appointmentsQuery;
+
+        if (role === 'admin') {
+          patientsQuery = query(patientsRef);
+          appointmentsQuery = query(
+            appointmentsRef,
+            where('date', '>=', today),
+            where('date', '<=', new Date(today.getTime() + 24 * 60 * 60 * 1000))
+          );
+        } else if (userFacilities.length > 0) {
+          patientsQuery = query(
+            patientsRef,
+            where('facilityId', 'in', userFacilities.map(f => f.id))
+          );
+          appointmentsQuery = query(
+            appointmentsRef,
+            where('facilityId', 'in', userFacilities.map(f => f.id)),
+            where('date', '>=', today),
+            where('date', '<=', new Date(today.getTime() + 24 * 60 * 60 * 1000))
+          );
+        } else {
+          patientsQuery = query(patientsRef, where('doctorId', '==', user.uid));
+          appointmentsQuery = query(
+            appointmentsRef,
+            where('doctorId', '==', user.uid),
+            where('date', '>=', today),
+            where('date', '<=', new Date(today.getTime() + 24 * 60 * 60 * 1000))
+          );
+        }
+
+        const [patientsSnapshot, appointmentsSnapshot] = await Promise.all([
+          getDocs(patientsQuery),
+          getDocs(appointmentsQuery)
+        ]);
+
+        setStats({
+          totalPatients: patientsSnapshot.size,
+          todayAppointments: appointmentsSnapshot.size,
+          activePatients: patientsSnapshot.docs.filter(doc => 
+            doc.data().status === 'active'
+          ).length
+        });
       } catch (error) {
-        console.error('Error fetching user facilities:', error);
-        return [];
+        console.error('Error fetching stats:', error);
       }
     };
 
@@ -57,14 +107,12 @@ const Dashboard = () => {
         if (role === 'admin') {
           q = query(patientsRef, orderBy('createdAt', 'desc'), limit(5));
         } else if (role === 'facility_admin' && userFacilities.length > 0) {
-          // Temporarily simplify query while index is building
           q = query(
             patientsRef,
-            where('facilityId', 'in', userFacilities),
+            where('facilityId', 'in', userFacilities.map(f => f.id)),
             limit(5)
           );
         } else {
-          // Temporarily simplify query while index is building
           q = query(
             patientsRef,
             where('doctorId', '==', user.uid),
@@ -80,7 +128,7 @@ const Dashboard = () => {
       } catch (error) {
         console.error('Error fetching recent patients:', error);
         if (error.message.includes('requires an index')) {
-          return []; // Return empty array while index is building
+          return [];
         }
         throw error;
       }
@@ -101,7 +149,7 @@ const Dashboard = () => {
         } else if (role === 'facility_admin' && userFacilities.length > 0) {
           q = query(
             appointmentsRef,
-            where('facilityId', 'in', userFacilities),
+            where('facilityId', 'in', userFacilities.map(f => f.id)),
             where('date', '>=', new Date()),
             orderBy('date', 'asc'),
             limit(5)
@@ -131,13 +179,14 @@ const Dashboard = () => {
       setLoading(true);
       setError(null);
       try {
-        const userFacilities = await fetchUserFacilities();
-        const [patients, appointments] = await Promise.all([
-          fetchRecentPatients(userFacilities),
-          fetchUpcomingAppointments(userFacilities)
+        const facilitiesResult = await dispatch(fetchUserFacilities({ page: 1, limit: 10 })).unwrap();
+        const userFacilities = facilitiesResult.facilities;
+        
+        await Promise.all([
+          fetchStats(userFacilities),
+          fetchRecentPatients(userFacilities).then(setRecentPatients),
+          fetchUpcomingAppointments(userFacilities).then(setUpcomingAppointments)
         ]);
-        setRecentPatients(patients);
-        setUpcomingAppointments(appointments);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         setError('Failed to load dashboard data');
@@ -146,71 +195,170 @@ const Dashboard = () => {
       }
     };
 
-    fetchAllData();
-  }, [user, role]);
+    if (user) {
+      fetchAllData();
+    }
+  }, [user, role, dispatch]);
 
   if (loading) {
-    return <div className="container"><p>Loading dashboard data...</p></div>;
+    return <div className="container loading">Loading dashboard data...</div>;
   }
 
   if (error) {
-    return <div className="container"><p className="error">{error}</p></div>;
+    return <div className="container error">{error}</div>;
   }
 
   return (
     <div className="container">
       <h1 className="title">Dashboard</h1>
-      <div className="grid grid-2-cols">
-        <div className="paper dashboard-card patients">
-          <h2 className="subtitle">Recent Patients</h2>
-          <div className="list">
-            {recentPatients.map(patient => (
-              <div key={patient.id} className="list-item" onClick={() => navigate(`/patients/${patient.id}`)}>
-                <p>{patient.name}</p>
-                <small>DOB: {formatDate(patient.dateOfBirth)}</small>
-              </div>
-            ))}
-            {recentPatients.length === 0 && <p>No recent patients</p>}
+      
+      {/* Stats Section */}
+      <div className="grid grid-3-cols stats-section">
+        <div className="paper stats-card">
+          <div className="stats-icon patients">
+            <PersonIcon />
+          </div>
+          <div className="stats-content">
+            <h3>{stats.totalPatients}</h3>
+            <p>Total Patients</p>
+          </div>
+          <div className="stats-trend positive">
+            <TrendingUpIcon />
           </div>
         </div>
         
-        <div className="paper dashboard-card appointments">
-          <h2 className="subtitle">Upcoming Appointments</h2>
+        <div className="paper stats-card">
+          <div className="stats-icon appointments">
+            <CalendarIcon />
+          </div>
+          <div className="stats-content">
+            <h3>{stats.todayAppointments}</h3>
+            <p>Today's Appointments</p>
+          </div>
+          <div className="stats-indicator">
+            <TimeIcon />
+          </div>
+        </div>
+        
+        <div className="paper stats-card">
+          <div className="stats-icon active">
+            <HospitalIcon />
+          </div>
+          <div className="stats-content">
+            <h3>{stats.activePatients}</h3>
+            <p>Active Patients</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-2-cols">
+        {/* Recent Patients Card */}
+        <div className="paper dashboard-card patients">
+          <div className="card-header">
+            <h2 className="subtitle">
+              <PersonIcon className="card-icon" />
+              Recent Patients
+            </h2>
+            <button 
+              className="button button-primary button-small"
+              onClick={() => navigate('/patients')}
+            >
+              View All
+            </button>
+          </div>
           <div className="list">
-            {upcomingAppointments.map(appointment => (
-              <div key={appointment.id} className="list-item" onClick={() => navigate(`/appointments/${appointment.id}`)}>
-                <p>{appointment.patientName}</p>
-                <small>Date: {formatDateTime(appointment.date)}</small>
+            {recentPatients.map(patient => (
+              <div 
+                key={patient.id} 
+                className="list-item interactive"
+                onClick={() => navigate(`/patients/${patient.id}`)}
+              >
+                <div className="list-item-content">
+                  <p className="patient-name">{patient.name}</p>
+                  <small>DOB: {formatDate(patient.dateOfBirth)}</small>
+                  {patient.status && (
+                    <span className={`status-badge ${patient.status}`}>
+                      {patient.status}
+                    </span>
+                  )}
+                </div>
               </div>
             ))}
-            {upcomingAppointments.length === 0 && <p>No upcoming appointments</p>}
+            {recentPatients.length === 0 && (
+              <p className="empty-state">No recent patients</p>
+            )}
+          </div>
+        </div>
+        
+        {/* Upcoming Appointments Card */}
+        <div className="paper dashboard-card appointments">
+          <div className="card-header">
+            <h2 className="subtitle">
+              <EventIcon className="card-icon" />
+              Upcoming Appointments
+            </h2>
+            <button 
+              className="button button-primary button-small"
+              onClick={() => navigate('/appointments')}
+            >
+              View All
+            </button>
+          </div>
+          <div className="list">
+            {upcomingAppointments.map(appointment => (
+              <div 
+                key={appointment.id} 
+                className="list-item interactive"
+                onClick={() => navigate(`/appointments/${appointment.id}`)}
+              >
+                <div className="list-item-content">
+                  <p className="appointment-title">{appointment.patientName}</p>
+                  <small className="appointment-time">
+                    {formatDateTime(appointment.date)}
+                  </small>
+                  {appointment.type && (
+                    <span className={`appointment-type ${appointment.type}`}>
+                      {appointment.type}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+            {upcomingAppointments.length === 0 && (
+              <p className="empty-state">No upcoming appointments</p>
+            )}
           </div>
         </div>
 
-        <div className="paper dashboard-card facilities">
-          <h2 className="subtitle">Facilities</h2>
-          <button 
-            className="button button-primary"
-            onClick={() => navigate('/facilities')}
-          >
-            View All Facilities
-          </button>
-        </div>
-
+        {/* Quick Actions Card */}
         <div className="paper dashboard-card actions">
-          <h2 className="subtitle">Quick Actions</h2>
-          <div className="flex flex-between gap-2">
+          <div className="card-header">
+            <h2 className="subtitle">
+              <AddIcon className="card-icon" />
+              Quick Actions
+            </h2>
+          </div>
+          <div className="quick-actions-grid">
             <button 
-              className="button button-primary"
+              className="action-button"
               onClick={() => navigate('/patients/new')}
             >
+              <PersonIcon />
               Add Patient
             </button>
             <button 
-              className="button button-primary"
+              className="action-button"
               onClick={() => navigate('/appointments/new')}
             >
+              <EventIcon />
               Schedule Appointment
+            </button>
+            <button 
+              className="action-button"
+              onClick={() => navigate('/facilities')}
+            >
+              <HospitalIcon />
+              View Facilities
             </button>
           </div>
         </div>
@@ -220,3 +368,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+

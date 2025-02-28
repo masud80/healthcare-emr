@@ -37,6 +37,7 @@ import ThreadDetails from './components/messaging/ThreadDetails';
 import CreateThread from './components/messaging/CreateThread';
 import RolePermissions from './components/admin/RolePermissions';
 import FacilityGroups from './components/admin/FacilityGroups';
+import BillingCodes from './components/billing/BillingCodes';
 import './styles/components.css';
 
 function App() {
@@ -80,6 +81,7 @@ function App() {
                     <Route path="admin/users" element={<UserManagement />} />
                     <Route path="admin/role-permissions" element={<RolePermissions />} />
                     <Route path="admin/facility-groups" element={<FacilityGroups />} />
+                    <Route path="admin/billing-codes" element={<BillingCodes />} />
                     <Route path="admin/assign-facility" element={<AssignFacilityTest />} />
                     <Route path="database-init" element={<DatabaseInitializer />} />
                     <Route path="audit" element={<AuditReport />} />

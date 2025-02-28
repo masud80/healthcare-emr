@@ -1,6 +1,6 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { db } from '../../firebase/config';
-import { collection, getDocs, doc, getDoc, updateDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, updateDoc, query, where, orderBy, limit, startAfter, documentId } from 'firebase/firestore';
 
 // Fetch all facilities
 export const fetchFacilities = createAsyncThunk(
@@ -24,34 +24,96 @@ export const fetchFacilities = createAsyncThunk(
 // Fetch user facilities
 export const fetchUserFacilities = createAsyncThunk(
   'facilities/fetchUserFacilities',
-  async (_, { getState }) => {
+  async ({ page = 1, limit = 10 } = {}, { getState }) => {
     try {
-      const state = getState();
-      const user = state.auth.user;
-      
+      const { user, role } = getState().auth;
+      console.log('Auth state:', getState().auth);
+      console.log('User object:', user);
+      console.log('User role from state:', role);
+      console.log('Is admin?:', role === 'admin');
+      console.log('Role type:', typeof role);
+
       if (!user) {
-        throw new Error('No authenticated user found');
+        throw new Error('No user found');
       }
 
+      // Check for admin role first before any database queries
+      if (role === 'admin') {
+        console.log('Admin user detected - proceeding to fetch all facilities');
+        const facilitiesRef = collection(db, 'facilities');
+        const snapshot = await getDocs(facilitiesRef);
+        const allFacilities = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+
+        // Calculate total and apply pagination manually
+        const total = allFacilities.length;
+        const start = (page - 1) * limit;
+        const end = start + limit;
+        const paginatedFacilities = allFacilities.slice(start, end);
+
+        console.log(`Admin: Fetched ${total} total facilities, returning ${paginatedFacilities.length} for page ${page}`);
+        
+        return {
+          facilities: paginatedFacilities,
+          total,
+          page,
+          limit
+        };
+      }
+
+      // Only non-admin users reach this point
+      console.log('Non-admin user - checking user_facilities junction table');
+      const userFacilitiesRef = collection(db, 'user_facilities');
+      const userFacilitiesQuery = query(userFacilitiesRef, where('userId', '==', user.uid));
+      const userFacilitiesSnapshot = await getDocs(userFacilitiesQuery);
+      
+      console.log(`Found ${userFacilitiesSnapshot.size} user_facilities documents`);
+      
+      // Extract facility IDs from the junction table
+      const facilityIds = userFacilitiesSnapshot.docs.map(doc => doc.data().facilityId);
+      console.log('Fetching facilities with IDs:', facilityIds);
+
+      if (facilityIds.length === 0) {
+        console.log('No facility IDs found for user');
+        return {
+          facilities: [],
+          total: 0,
+          page,
+          limit
+        };
+      }
+
+      // Fetch facilities in batches of 10 (Firestore limitation)
       const facilitiesRef = collection(db, 'facilities');
-      let snapshot;
-
-      if (user.role === 'admin') {
-        // Admin can see all facilities
-        snapshot = await getDocs(facilitiesRef);
-      } else {
-        // Regular users only see assigned facilities
-        const q = query(facilitiesRef, where('assignedUsers', 'array-contains', user.uid));
-        snapshot = await getDocs(q);
+      const allFacilities = [];
+      for (let i = 0; i < facilityIds.length; i += 10) {
+        const batch = facilityIds.slice(i, i + 10);
+        const batchQuery = query(facilitiesRef, where(documentId(), 'in', batch));
+        const batchSnapshot = await getDocs(batchQuery);
+        allFacilities.push(...batchSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })));
       }
 
-      const facilities = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      return facilities;
+      // Apply pagination manually
+      const total = allFacilities.length;
+      const start = (page - 1) * limit;
+      const end = start + limit;
+      const paginatedFacilities = allFacilities.slice(start, end);
+
+      console.log(`Non-admin: Fetched ${total} total facilities, returning ${paginatedFacilities.length} for page ${page}`);
+
+      return {
+        facilities: paginatedFacilities,
+        total,
+        page,
+        limit
+      };
     } catch (error) {
-      console.error('Error fetching user facilities:', error);
+      console.error('Error in fetchUserFacilities:', error);
       throw error;
     }
   }

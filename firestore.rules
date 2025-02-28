@@ -92,12 +92,19 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated() && (
         isAdmin() || 
-        (isFacilityAdmin() && 
-          // Ensure facility admin can only assign facilities they manage
-          request.resource.data.facilities.hasOnly(
+        (isFacilityAdmin() && (
+          // For documents with facilities array
+          (request.resource.data.facilities != null && 
+            request.resource.data.facilities.hasOnly(
+              get(/databases/$(database)/documents/user_facilities/$(request.auth.uid)).data.facilities
+            )
+          ) ||
+          // For documents with facilityId field
+          (request.resource.data.facilityId != null && 
+            request.resource.data.facilityId in 
             get(/databases/$(database)/documents/user_facilities/$(request.auth.uid)).data.facilities
           )
-        )
+        ))
       );
     }
 
@@ -224,6 +231,17 @@ service cloud.firestore {
       allow create: if isAuthenticated() && 
         request.auth.uid in get(/databases/$(database)/documents/messageThreads/$(request.resource.data.threadId)).data.participants &&
         request.resource.data.keys().hasAll(['threadId', 'content', 'sentAt', 'sentBy']);
+    }
+
+    // Billing Codes collection
+    match /billing_codes/{codeId} {
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        isFacilityAdmin() ||
+        isDoctor() ||
+        isNurse()
+      );
+      allow write: if isAuthenticated() && isAdmin();
     }
 
     // Notifications collection

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button } from '@mui/material';
+import { Button, TextField } from '@mui/material';
 import ParticipantSearch from './ParticipantSearch';
 import { createThread } from '../../utils/messaging';
 import { useSelector } from 'react-redux';
@@ -11,6 +11,7 @@ import { db } from '../../firebase/config';
 const CreateThread = ({ onThreadCreated }) => {
   const [selectedParticipants, setSelectedParticipants] = useState([]);
   const [showParticipantSearch, setShowParticipantSearch] = useState(false);
+  const [subject, setSubject] = useState('');
   const currentUser = useSelector(selectUser);
   const [loading, setLoading] = useState(false);
 
@@ -49,7 +50,7 @@ const CreateThread = ({ onThreadCreated }) => {
       };
       
       const participants = [...selectedParticipants, formattedCurrentUser];
-      const threadRef = await createThread(participants);
+      const threadRef = await createThread(participants, subject || 'New Conversation');
       if (onThreadCreated) {
         onThreadCreated();
       }
@@ -64,6 +65,15 @@ const CreateThread = ({ onThreadCreated }) => {
   return (
     <div className="create-thread-container">
       <h2>Create New Thread</h2>
+      <TextField
+        fullWidth
+        label="Subject"
+        value={subject}
+        onChange={(e) => setSubject(e.target.value)}
+        placeholder="Enter conversation subject"
+        margin="normal"
+        variant="outlined"
+      />
       {!showParticipantSearch ? (
         <Button
           variant="contained"

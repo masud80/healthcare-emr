@@ -67,7 +67,7 @@ const BillDetails = () => {
 
       // Add header
       doc.setFontSize(20);
-      doc.text('Healthcare EMR Bill', pageWidth / 2, yPos, { align: 'center' });
+      doc.text('QuantumLeap EMR Bill', pageWidth / 2, yPos, { align: 'center' });
       
       // Add bill details
       yPos += 20;

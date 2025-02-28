@@ -6,6 +6,23 @@
   margin: 0 auto;
 }
 
+.container.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  font-size: 1.1rem;
+  color: #666;
+}
+
+.container.error {
+  color: #d32f2f;
+  padding: 1rem;
+  border-radius: 4px;
+  background-color: #ffebee;
+  margin: 1rem 0;
+}
+
 /* Loading spinner */
 .loading-spinner {
   display: flex;
@@ -24,30 +41,121 @@
 /* Grid layouts */
 .grid {
   display: grid;
-  gap: 1rem;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 .grid-2-cols {
   grid-template-columns: repeat(2, 1fr);
 }
 
+.grid-3-cols {
+  grid-template-columns: repeat(3, 1fr);
+}
+
 /* Paper component */
 .paper {
   background: white;
-  border-radius: 8px;
-  padding: 1.25rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  transition: transform 0.2s ease;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
 }
 
 .paper:hover {
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-/* Dashboard specific styles */
+/* Stats cards */
+.stats-section {
+  margin-bottom: 2rem;
+}
+
+.stats-card {
+  display: flex;
+  align-items: center;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.stats-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 1rem;
+}
+
+.stats-icon svg {
+  font-size: 24px;
+  color: white;
+}
+
+.stats-icon.patients {
+  background-color: #1976d2;
+}
+
+.stats-icon.appointments {
+  background-color: #4caf50;
+}
+
+.stats-icon.active {
+  background-color: #9c27b0;
+}
+
+.stats-content {
+  flex: 1;
+}
+
+.stats-content h3 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin: 0;
+  color: #333;
+}
+
+.stats-content p {
+  margin: 0.25rem 0 0;
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.stats-trend {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.stats-trend.positive svg {
+  color: #4caf50;
+}
+
+.stats-indicator svg {
+  color: #ff9800;
+}
+
+/* Dashboard cards */
 .dashboard-card {
   border-left: 4px solid;
   background: linear-gradient(to right, var(--card-color) 0%, white 100%);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.card-icon {
+  margin-right: 0.5rem;
+  font-size: 1.25rem !important;
+  vertical-align: bottom;
 }
 
 .dashboard-card.patients {
@@ -60,11 +168,6 @@
   border-left-color: #4caf50;
 }
 
-.dashboard-card.facilities {
-  --card-color: rgba(156, 39, 176, 0.1);
-  border-left-color: #9c27b0;
-}
-
 .dashboard-card.actions {
   --card-color: rgba(255, 152, 0, 0.1);
   border-left-color: #ff9800;
@@ -72,71 +175,175 @@
 
 /* Typography */
 .title {
-  font-size: 1.75rem;
+  font-size: 2rem;
   font-weight: 600;
-  margin-bottom: 1.25rem;
+  margin-bottom: 2rem;
   color: #333;
 }
 
 .subtitle {
   font-size: 1.25rem;
   font-weight: 500;
-  margin-bottom: 0.75rem;
+  margin: 0;
   color: #444;
+  display: flex;
+  align-items: center;
 }
 
 /* List styles */
 .list {
-  margin-top: 0.5rem;
+  margin-top: 1rem;
 }
 
 .list-item {
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #eee;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
   cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.list-item:hover {
-  background-color: #f5f5f5;
+  transition: all 0.2s ease;
+  border: 1px solid #eee;
 }
 
 .list-item:last-child {
-  border-bottom: none;
+  margin-bottom: 0;
 }
 
-.list-item p {
-  margin: 0;
-  color: #333;
+.list-item.interactive:hover {
+  background-color: #f5f5f5;
+  transform: translateX(4px);
 }
 
-.list-item small {
-  color: #666;
-  font-size: 0.875rem;
+.list-item-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
-/* Buttons */
-.button {
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  border: none;
-  cursor: pointer;
+.patient-name {
   font-weight: 500;
-  transition: background-color 0.2s;
+  color: #333;
+  margin: 0;
 }
 
-.button-primary {
-  background-color: #1976d2;
-  color: white;
+.appointment-title {
+  font-weight: 500;
+  color: #333;
+  margin: 0;
 }
 
-.button-primary:hover {
-  background-color: #1565c0;
+.appointment-time {
+  color: #666;
 }
 
-.button:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.status-badge.active {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-badge.inactive {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.appointment-type {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: capitalize;
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+/* Quick actions */
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.action-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  border: none;
+  border-radius: 12px;
+  background-color: #f5f5f5;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  gap: 0.5rem;
+}
+
+.action-button:hover {
+  background-color: #eeeeee;
+  transform: translateY(-2px);
+}
+
+.action-button svg {
+  font-size: 24px;
+  color: #666;
+}
+
+.empty-state {
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  padding: 1rem;
+}
+
+.button-small {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  border-radius: 6px;
+}
+
+/* Responsive styles */
+@media (max-width: 1024px) {
+  .grid-3-cols {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .quick-actions-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .grid-2-cols,
+  .grid-3-cols {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats-card {
+    padding: 1rem;
+  }
+  
+  .stats-content h3 {
+    font-size: 1.5rem;
+  }
+  
+  .quick-actions-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .title {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
 }
 
 /* Form elements */
@@ -174,72 +381,136 @@
 /* Facility Filter */
 .facility-filter {
   position: relative;
-  z-index: 1300;
-  margin-left: 16px;
+  display: inline-block;
 }
 
 .facility-filter-button {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: all 0.2s;
   display: flex;
   align-items: center;
-  gap: 8px;
+  padding: 8px 16px;
+  background-color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #1976d2;
+  transition: all 0.2s ease;
 }
 
 .facility-filter-button:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(25, 118, 210, 0.04);
+  border-color: #1976d2;
+}
+
+.facility-filter-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .facility-dropdown {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  background-color: white;
-  border-radius: 8px;
+  min-width: 320px;
+  background: #ffffff;
+  border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  min-width: 250px;
-  max-height: 400px;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.facility-dropdown-header {
+  padding: 16px;
+}
+
+.facility-search {
+  margin-top: 12px;
+  width: 100%;
+}
+
+.facility-search .MuiInputBase-root {
+  background-color: #f5f5f5;
+  border-radius: 8px;
+}
+
+.facility-list {
+  max-height: 300px;
   overflow-y: auto;
-  color: #333;
+  padding: 8px 0;
 }
 
 .facility-checkbox {
   display: flex;
   align-items: center;
-  padding: 10px 16px;
+  padding: 8px 16px;
   cursor: pointer;
-  transition: background-color 0.2s;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.facility-checkbox:last-child {
-  border-bottom: none;
+  transition: background-color 0.2s ease;
 }
 
 .facility-checkbox:hover {
-  background-color: #f5f5f5;
+  background-color: rgba(0, 0, 0, 0.04);
 }
 
 .facility-checkbox input[type="checkbox"] {
   width: 18px;
   height: 18px;
-  margin: 0;
+  margin-right: 12px;
   cursor: pointer;
 }
 
-.facility-empty {
+.facility-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.facility-name {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.facility-footer {
   padding: 16px;
-  color: #666;
-  font-style: italic;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.facility-empty {
+  padding: 24px 16px;
   text-align: center;
-  border-top: 1px solid #eee;
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 14px;
+}
+
+.facility-error {
+  color: #d32f2f;
+  font-size: 12px;
+  margin-top: 4px;
+  padding: 0 8px;
+}
+
+/* Custom scrollbar for facility list */
+.facility-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.facility-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.facility-list::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.facility-list::-webkit-scrollbar-thumb:hover {
+  background: #666;
 }
 
 /* Visit styles */
@@ -395,22 +666,6 @@
 .visit-details .note-content {
   white-space: pre-wrap;
   line-height: 1.5;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .grid-2-cols {
-    grid-template-columns: 1fr;
-  }
-  
-  .container {
-    padding: 1rem;
-  }
-  
-  .visit-form .vitals-grid,
-  .visit-details .vitals-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* Documents styles */

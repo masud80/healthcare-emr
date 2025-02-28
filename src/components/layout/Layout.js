@@ -47,6 +47,21 @@ const drawerStyles = {
       width: drawerWidth,
       backgroundColor: '#f8f9fa',
       borderRight: '1px solid rgba(0, 0, 0, 0.12)'
+    },
+    '& .MuiListItemButton-root': {
+      minHeight: '40px',
+      paddingTop: '4px',
+      paddingBottom: '4px'
+    },
+    '& .MuiListItemIcon-root': {
+      minWidth: '40px',
+      fontSize: '0.9rem'
+    },
+    '& .MuiListItemText-primary': {
+      fontSize: '0.875rem'
+    },
+    '& .MuiListItemText-secondary': {
+      fontSize: '0.75rem'
     }
   },
   listItem: {
@@ -63,9 +78,19 @@ const drawerStyles = {
     }
   },
   userInfo: {
-    padding: '16px',
+    padding: '12px',
     borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
-    backgroundColor: '#fff'
+    backgroundColor: '#fff',
+    '& .MuiTypography-subtitle1': {
+      fontSize: '0.9rem',
+      fontWeight: 'bold'
+    },
+    '& .MuiTypography-body2': {
+      fontSize: '0.8rem'
+    },
+    '& .MuiTypography-caption': {
+      fontSize: '0.75rem'
+    }
   },
   dashboard: {
     '& .MuiListItemIcon-root': { color: '#2196F3' },
@@ -118,6 +143,10 @@ const drawerStyles = {
   facilityGroups: {
     '& .MuiListItemIcon-root': { color: '#607D8B' },
     '&:hover': { backgroundColor: 'rgba(96, 125, 139, 0.08)' }
+  },
+  billingCodes: {
+    '& .MuiListItemIcon-root': { color: '#8E24AA' },
+    '&:hover': { backgroundColor: 'rgba(142, 36, 170, 0.08)' }
   }
 };
 
@@ -177,6 +206,21 @@ const Layout = () => {
     } catch (error) {
       console.error('Error signing out:', error);
     }
+  };
+
+  // Add a function to check if the current route needs facility filtering
+  const shouldShowFacilityFilter = () => {
+    const path = window.location.pathname;
+    // Add routes that need facility filtering
+    const facilitiesRoutes = [
+      '/dashboard',
+      '/patients',
+      '/appointments',
+      '/facilities',
+      '/bills',
+      '/prescriptions'
+    ];
+    return facilitiesRoutes.some(route => path.startsWith(route));
   };
 
   const drawer = (
@@ -319,6 +363,17 @@ const Layout = () => {
                         <ListItemText primary="Facility Groups" />
                       </ListItemButton>
                     </ListItem>
+                    <ListItem component="div">
+                      <ListItemButton 
+                        onClick={() => navigate('/admin/billing-codes')} 
+                        sx={{ pl: 4, ...drawerStyles.billingCodes }}
+                      >
+                        <ListItemIcon>
+                          <AssessmentIcon />
+                        </ListItemIcon>
+                        <ListItemText primary="Billing Codes" />
+                      </ListItemButton>
+                    </ListItem>
                   </>
                 )}
               </List>
@@ -397,8 +452,7 @@ const Layout = () => {
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
-          backgroundColor: facilityBranding?.ribbonColor || '#1976d2',
-          zIndex: (theme) => theme.zIndex.drawer + 1
+          bgcolor: facilityBranding?.ribbonColor || '#1976d2'
         }}
       >
         <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -412,30 +466,27 @@ const Layout = () => {
             >
               <MenuIcon />
             </IconButton>
-            <Box>
-              <Typography variant="h6" noWrap component="div">
-                Healthcare EMR
-              </Typography>
-              {facilityBranding?.facilityName && (
-                <Typography variant="subtitle2" noWrap component="div">
-                  {facilityBranding.facilityName}
-                </Typography>
-              )}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <img 
+                src="/logo-icon-title.webp" 
+                alt="QuantumLeap Logo" 
+                style={{ height: 30 }}
+              />
+              <Box>
+                {facilityBranding?.facilityName && (
+                  <Typography variant="subtitle2" noWrap component="div">
+                    {facilityBranding.facilityName}
+                  </Typography>
+                )}
+              </Box>
             </Box>
           </Box>
-          {facilityBranding?.logoUrl && (
-            <img 
-              src={facilityBranding.logoUrl} 
-              alt="Facility Logo" 
-              style={{ height: 40, marginRight: 16 }}
-            />
-          )}
           <Box sx={{ flex: 2, display: 'flex', justifyContent: 'center' }}>
             <GlobalSearch />
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, justifyContent: 'flex-end', gap: 2 }}>
             {user && <NotificationBell />}
-            <FacilityFilter />
+            {user && shouldShowFacilityFilter() && <FacilityFilter />}
           </Box>
         </Toolbar>
       </AppBar>

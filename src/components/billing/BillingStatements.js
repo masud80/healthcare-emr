@@ -119,7 +119,7 @@ const BillingStatements = () => {
           <Box sx={{ minHeight: '60vh', p: 2, border: '1px solid #ddd' }}>
             {statementOptions.showLogo && (
               <Box textAlign="center" mb={3}>
-                <Typography variant="h5">Healthcare EMR System</Typography>
+                <Typography variant="h5">QuantumLeap EMR System</Typography>
                 <Typography variant="body2">123 Medical Center Drive</Typography>
                 <Typography variant="body2">City, State 12345</Typography>
               </Box>

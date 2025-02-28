@@ -96,10 +96,10 @@ const BillExport = ({ bill, open, onClose }) => {
           ${exportOptions.includeLogo || exportOptions.includeLetterhead ? `
             <div class="header">
               ${exportOptions.includeLogo ? `
-                <img src="/logo.png" alt="Hospital Logo" class="logo" />
+                <img src="/logo-icon-title.webp" alt="QuantumLeap Logo" class="logo" />
               ` : ''}
               ${exportOptions.includeLetterhead ? `
-                <h1>Healthcare EMR System</h1>
+                <h1>QuantumLeap EMR System</h1>
                 <p>123 Medical Center Drive<br/>
                 City, State 12345<br/>
                 Phone: (555) 123-4567</p>

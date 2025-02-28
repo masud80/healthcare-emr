@@ -14,6 +14,11 @@ const initialState = {
   selectedFacilities: [],
   loading: false,
   error: null,
+  pagination: {
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0
+  }
 };
 
 const facilitiesSlice = createSlice({
@@ -76,7 +81,12 @@ const facilitiesSlice = createSlice({
       })
       .addCase(fetchUserFacilities.fulfilled, (state, action) => {
         state.loading = false;
-        state.userFacilities = action.payload;
+        state.userFacilities = action.payload.facilities;
+        state.pagination = {
+          currentPage: action.payload.currentPage,
+          totalPages: action.payload.totalPages,
+          totalCount: action.payload.totalCount
+        };
         state.error = null;
       })
       .addCase(fetchUserFacilities.rejected, (state, action) => {
@@ -161,5 +171,6 @@ export const selectSelectedFacility = (state) => state.facilities.selectedFacili
 export const selectSelectedFacilities = (state) => state.facilities.selectedFacilities;
 export const selectLoading = (state) => state.facilities.loading;
 export const selectError = (state) => state.facilities.error;
+export const selectPagination = (state) => state.facilities.pagination;
 
 export default facilitiesSlice.reducer;
