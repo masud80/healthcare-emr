@@ -56,13 +56,19 @@ service cloud.firestore {
 
     // Patients collection
     match /patients/{patientId} {
+      function isEmailUnique(email) {
+        let existingPatients = getAfter(/databases/$(database)/documents/patients)
+          .where('email', '==', email).limit(1);
+        return existingPatients.size() == 0 || 
+          (existingPatients.size() == 1 && existingPatients[0].id == patientId);
+      }
+
       allow read: if isAuthenticated();
-      allow write: if isAdmin() || isFacilityAdmin();
-      allow update: if request.auth != null 
-        && request.auth.token.role in ['admin', 'doctor']
-        && (!request.resource.data.diff(resource.data).affectedKeys()
-            .hasAny(['isPatientPortalEnabled']) 
-            || request.auth.token.role == 'admin');
+      allow create: if isAdmin() || isFacilityAdmin() && 
+        (request.resource.data.email == null || isEmailUnique(request.resource.data.email));
+      allow update: if (isAdmin() || isFacilityAdmin()) && 
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['email']) || 
+        isEmailUnique(request.resource.data.email));
     }
 
     // Patient data access

@@ -34,11 +34,15 @@ import MyAccount from './components/account/MyAccount.jsx';
 import './styles/components.css';
 
 function App() {
+  console.log('App rendering...'); // Add this for debugging
+
   return (
     <Provider store={store}>
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <Router>
           <Routes>
+            {/* Make login the default route */}
+            <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             
@@ -48,8 +52,6 @@ function App() {
             } />
             
             <Route path="/" element={<Layout />}>
-              <Route index element={<Navigate to="/dashboard" />} />
-              
               {/* Protected routes */}
               <Route element={<PrivateRoute />}>
                 {/* Basic routes that any authenticated user can access */}

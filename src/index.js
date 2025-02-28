@@ -8,8 +8,8 @@ import { auth, db } from './firebase/config';
 import store from './redux/store';
 import { setUser, setLoading, setRole, setError } from './redux/slices/authSlice';
 
-// Ensure Firebase is initialized
-console.log('Initializing Firebase Auth listener');
+// Enable more detailed error logging
+console.log('Application starting...');
 
 const container = document.getElementById('root');
 const root = createRoot(container);
@@ -19,6 +19,7 @@ store.dispatch(setLoading(true));
 
 // Set up authentication listener
 onAuthStateChanged(auth, async (user) => {
+  console.log('Auth state changed:', user ? 'User logged in' : 'No user');
   try {
     if (user) {
       // Force token refresh to get latest claims
@@ -50,6 +51,15 @@ onAuthStateChanged(auth, async (user) => {
   } finally {
     store.dispatch(setLoading(false));
   }
+});
+
+// Add error boundary
+window.addEventListener('error', (event) => {
+  console.error('Global error:', event.error);
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('Unhandled promise rejection:', event.reason);
 });
 
 root.render(

@@ -5,6 +5,7 @@ import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { fetchFacilities } from '../../redux/thunks/facilitiesThunks';
 import '../../styles/components.css';
+import { isEmailUnique } from '../../utils/patientValidation';
 
 const PatientForm = () => {
   const navigate = useNavigate();
@@ -31,6 +32,32 @@ const PatientForm = () => {
     chronicConditions: '',
     facilityId: ''
   });
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const validateEmail = async (email) => {
+    if (!email) return true;
+    
+    try {
+      const isUnique = await isEmailUnique(email);
+      if (!isUnique) {
+        setErrors(prev => ({
+          ...prev,
+          email: 'This email is already registered to another patient'
+        }));
+        return false;
+      }
+      setErrors(prev => ({ ...prev, email: null }));
+      return true;
+    } catch (error) {
+      console.error('Error checking email uniqueness:', error);
+      setErrors(prev => ({
+        ...prev,
+        email: 'Error validating email. Please try again.'
+      }));
+      return false;
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -49,14 +76,33 @@ const PatientForm = () => {
         [name]: value
       }));
     }
+    
+    // Clear error when field is modified
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: null }));
+    }
+    
+    // Validate email on change
+    if (name === 'email') {
+      validateEmail(value);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
+    
     try {
-      // Convert string arrays to actual arrays
+      // Validate email before submission
+      const isEmailValid = await validateEmail(formData.email);
+      if (!isEmailValid) {
+        setIsSubmitting(false);
+        return;
+      }
+
       const processedData = {
         ...formData,
+        email: formData.email?.toLowerCase(),
         allergies: formData.allergies ? formData.allergies.split(',').map(item => item.trim()) : [],
         chronicConditions: formData.chronicConditions ? formData.chronicConditions.split(',').map(item => item.trim()) : [],
         createdAt: new Date().toISOString(),
@@ -67,6 +113,12 @@ const PatientForm = () => {
       navigate('/patients');
     } catch (error) {
       console.error('Error adding patient:', error);
+      setErrors(prev => ({
+        ...prev,
+        submit: 'Failed to create patient. Please try again.'
+      }));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -139,9 +191,11 @@ const PatientForm = () => {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className="input"
-              required
+              className={`input ${errors.email ? 'error' : ''}`}
             />
+            {errors.email && (
+              <span className="error-message">{errors.email}</span>
+            )}
           </div>
 
           <div className="form-control">
@@ -278,11 +332,12 @@ const PatientForm = () => {
           >
             Cancel
           </button>
-          <button
-            type="submit"
+          <button 
+            type="submit" 
+            disabled={isSubmitting || Object.keys(errors).length > 0}
             className="button button-primary"
           >
-            Add Patient
+            {isSubmitting ? 'Creating...' : 'Add Patient'}
           </button>
         </div>
       </form>

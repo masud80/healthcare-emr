@@ -32,6 +32,7 @@ import '../../styles/patientCardStyles.css';
 import '../../styles/patientCardOutline.css';
 import '../../styles/tabs.css';
 import '../../styles/aiSummary.css';
+import { isEmailUnique } from '../../utils/patientValidation';
 
 const TabPanel = ({ children, value, index }) => (
   <div hidden={value !== index}>
@@ -57,6 +58,14 @@ const PatientDetails = () => {
     allergies: [],
     chronicConditions: []
   });
+  const [error, setError] = useState(null);
+
+  const validateEmailForUpdate = async (email) => {
+    if (!email) return true;
+    if (email === selectedPatient.email) return true;
+    
+    return await isEmailUnique(email, id);
+  };
 
   useEffect(() => {
     if (selectedPatient) {
@@ -116,14 +125,30 @@ const [editedEmergencyContact, setEditedEmergencyContact] = useState({});
 
   const handleUpdateBasicInfo = async () => {
     try {
-      await updateDoc(doc(db, 'patients', id), editedBasicInfo);
+      // Validate email before update
+      if (editedBasicInfo.email) {
+        const isEmailValid = await validateEmailForUpdate(editedBasicInfo.email);
+        if (!isEmailValid) {
+          setError('This email is already registered to another patient');
+          return;
+        }
+      }
+
+      await updateDoc(doc(db, 'patients', id), {
+        ...editedBasicInfo,
+        email: editedBasicInfo.email?.toLowerCase(),
+        updatedAt: new Date().toISOString()
+      });
+      
       dispatch(setSelectedPatient({
         ...selectedPatient,
         ...editedBasicInfo
       }));
       setEditingBasicInfo(false);
+      setError(null);
     } catch (error) {
       console.error('Error updating basic information:', error);
+      setError('Failed to update patient information');
     }
   };
 
