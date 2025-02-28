@@ -15,6 +15,10 @@
     ],
     "rewrites": [
       {
+        "source": "/external/**",
+        "function": "api"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
