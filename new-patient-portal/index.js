@@ -1,4 +1,7 @@
+import "expo-dev-client";
 import { registerRootComponent } from 'expo';
-import App from './App.tsx';
+import './src/firebase/init'; // Import this first
+import App from './app';
+
 
 registerRootComponent(App);

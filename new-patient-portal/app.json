@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "new-patient-portal",
-    "slug": "new-patient-portal",
+    "name": "PatientPortal",
+    "slug": "patientportal",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,14 +15,20 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourcompany.newpatientportal"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.healthcare.patientportal"
-    }
+      "package": "com.patientportal"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+
+    "scheme": "patientportal"
   }
 }

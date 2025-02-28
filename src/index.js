@@ -8,10 +8,14 @@ import { auth, db } from './firebase/config';
 import store from './redux/store';
 import { setUser, setLoading, setRole, setError } from './redux/slices/authSlice';
 
-const container = document.getElementById('root'); 
+// Ensure Firebase is initialized
+console.log('Initializing Firebase Auth listener');
+
+const container = document.getElementById('root');
+const root = createRoot(container);
 
 // Initialize loading state
-store.dispatch(setLoading(true)); 
+store.dispatch(setLoading(true));
 
 // Set up authentication listener
 onAuthStateChanged(auth, async (user) => {
@@ -34,23 +38,19 @@ onAuthStateChanged(auth, async (user) => {
           email: user.email
         }));
         
-        // Explicitly dispatch role
         store.dispatch(setRole(role));
       }
     } else {
-      // Clear auth state when user logs out
       store.dispatch(setUser(null));
       store.dispatch(setRole(null));
     }
-    store.dispatch(setLoading(false));
   } catch (error) {
     console.error('Auth state change error:', error);
     store.dispatch(setError(error.message));
+  } finally {
     store.dispatch(setLoading(false));
   }
 });
-
-const root = createRoot(container);
 
 root.render(
   <React.StrictMode>

@@ -1,0 +1,1 @@
+(taskkill /F /IM node.exe /T || taskkill /F /IM java.exe /T) & rd /s /q %USERPROFILE%\.gradle\caches && rd /s /q %USERPROFILE%\.gradle\wrapper && cd android && gradlew clean && gradlew --stop && gradlew build --refresh-dependencies

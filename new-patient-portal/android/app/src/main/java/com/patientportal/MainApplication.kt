@@ -1,4 +1,4 @@
-package com.anonymous.newpatientportal
+package com.patientportal
 
 import android.app.Application
 import android.content.res.Configuration

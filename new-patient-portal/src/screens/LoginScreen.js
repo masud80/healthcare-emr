@@ -1,10 +1,20 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { signInWithEmailAndPassword } from '@firebase/auth';
-import { auth } from '../firebase/config';
-import { getFirestore, doc, getDoc } from '@firebase/firestore';
+import {
+  StyleSheet,
+  View,
+  TextInput,
+  TouchableOpacity,
+  Text,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+  Image,
+} from 'react-native';
+import PropTypes from 'prop-types';
+import { fireauth as auth, db, signInWithEmail } from '../firebase/init';
 
-const LoginScreen = ({ navigation }) => {
+
+export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,106 +27,121 @@ const LoginScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      
-      // Get the user's patient document
-      const db = getFirestore();
-      const patientDoc = await getDoc(doc(db, 'patients', userCredential.user.uid));
-      
-      if (!patientDoc.exists()) {
-        throw new Error('Access denied: Not a patient account');
-      }
-
-      const patientData = patientDoc.data();
-      if (!patientData.isPatientPortalEnabled) {
-        throw new Error('Patient portal access not enabled. Please contact your healthcare provider.');
-      }
+       await signInWithEmail(email, password);       
 
       navigation.navigate('MainApp');
-    } catch (error) {
-      let errorMessage = 'Invalid login credentials';
-      if (error.message.includes('Patient portal access not enabled')) {
-        errorMessage = error.message;
-      } else if (error.message.includes('Not a patient account')) {
-        errorMessage = 'This application is only for patient access';
-      }
-      Alert.alert('Error', errorMessage);
+    } catch (error) {      
+      Alert.alert('Error', error.toString());
+      //Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Patient Portal</Text>
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
-        <TouchableOpacity 
-          style={[styles.button, loading && styles.buttonDisabled]} 
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>{loading ? 'Logging in...' : 'Login'}</Text>
-        </TouchableOpacity>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}>
+      <View style={styles.formContainer}>
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('../../assets/logo-icon-title.webp')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+        <Text style={styles.title}>Welcome to Care360</Text>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+          <TouchableOpacity
+            style={[styles.loginButton, loading && styles.buttonDisabled]}
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            <Text style={styles.buttonText}>{loading ? 'Logging in...' : 'Login'}</Text>
+          </TouchableOpacity>
+        </View>       
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
+
+
+LoginScreen.propTypes = {
+  navigation: PropTypes.object.isRequired,
+};
+
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fff',
+  },
+  formContainer: {
+    flex: 1,
     justifyContent: 'center',
+    paddingHorizontal: 20,
+    backgroundColor: '#fff',
+  },
+  logoContainer: {
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#f5f5f5',
+    marginBottom: 30,
+  },
+  logo: {
+    width: 200,
+    height: 80,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
+    textAlign: 'center',
     marginBottom: 30,
-    color: '#333',
-  },
-  inputContainer: {
-    width: '100%',
-    maxWidth: 400,
+    color: '#4630eb',
   },
   input: {
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 5,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#ddd',
+    height: 50,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    fontSize: 16,
   },
-  button: {
-    backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 5,
+  loginButton: {
+    backgroundColor: '#4630eb',
+    height: 50,
+    borderRadius: 8,
+    justifyContent: 'center',
     alignItems: 'center',
-  },
-  buttonDisabled: {
-    backgroundColor: '#ccc',
+    marginTop: 16,
   },
   buttonText: {
-    color: 'white',
+    color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  poweredBy: {
+    position: 'absolute',
+    bottom: 20,
+    alignSelf: 'center',
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
+  },
 });
-
-export default LoginScreen;
