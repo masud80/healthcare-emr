@@ -31,6 +31,7 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import LocalPharmacyIcon from '@mui/icons-material/LocalPharmacy';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
+import MessageIcon from '@mui/icons-material/Message';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 import { getDocs, query, collection, where, limit, getDoc, doc } from 'firebase/firestore';
@@ -73,6 +74,7 @@ const Layout = () => {
   const navigate = useNavigate();
   const user = useSelector(selectUser);
   const role = useSelector(selectRole);
+  console.log('Current user role:', role); // Add this line to debug
   const [facilityBranding, setFacilityBranding] = useState(null);
 
   useEffect(() => {
@@ -218,6 +220,14 @@ const Layout = () => {
                       </ListItemButton>
                     </ListItem>
                     <ListItem component="div">
+                      <ListItemButton onClick={() => navigate('/admin/pharmacies')} sx={{ pl: 4 }}>
+                        <ListItemIcon>
+                          <LocalPharmacyIcon />
+                        </ListItemIcon>
+                        <ListItemText primary="Pharmacy Management" />
+                      </ListItemButton>
+                    </ListItem>
+                    <ListItem component="div">
                       <ListItemButton onClick={() => navigate('/audit')} sx={{ pl: 4 }}>
                         <ListItemIcon>
                           <AssessmentIcon />
@@ -243,6 +253,21 @@ const Layout = () => {
             <ListItemText primary="Billing" />
           </ListItemButton>
         </ListItem>
+        {/* Add Secure Messaging navigation item - visible to admin, doctor, and nurse */}
+        {(role === 'admin' || role === 'doctor' || role === 'nurse') && (
+          <ListItem component="div">
+            <ListItemButton 
+              onClick={() => navigate('/messaging')}
+              sx={drawerStyles.listItem}
+              selected={window.location.pathname.startsWith('/messaging')}
+            >
+              <ListItemIcon>
+                <MessageIcon />
+              </ListItemIcon>
+              <ListItemText primary="Secure Messaging" />
+            </ListItemButton>
+          </ListItem>
+        )}
         {user && ( // Only show My Account link for logged-in users
           <ListItem component="div">
             <ListItemButton 

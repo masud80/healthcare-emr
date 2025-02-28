@@ -1,4 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit';
+import messagingReducer from './slices/messagingSlice';
 import billingReducer from './slices/billingSlice';
 import authReducer from './slices/authSlice';
 import facilitiesReducer from './slices/facilitiesSlice';
@@ -11,6 +12,7 @@ import pharmacyReducer from './slices/pharmacySlice';
 
 export const store = configureStore({
   reducer: {
+    messaging: messagingReducer,
     auth: authReducer,
     facilities: facilitiesReducer,
     patients: patientsReducer,

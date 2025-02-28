@@ -12,6 +12,34 @@ async function createIndexes() {
   try {
     const db = admin.firestore();
     
+    // Add messaging indexes
+    const messagingIndexes = [
+      {
+        collectionGroup: 'messageThreads',
+        queryScope: 'COLLECTION',
+        fields: [
+          { fieldPath: 'participants', arrayConfig: 'CONTAINS' },
+          { fieldPath: 'lastMessageAt', order: 'DESCENDING' }
+        ]
+      },
+      {
+        collectionGroup: 'messages',
+        queryScope: 'COLLECTION',
+        fields: [
+          { fieldPath: 'threadId', order: 'ASCENDING' },
+          { fieldPath: 'sentAt', order: 'ASCENDING' }
+        ]
+      }
+    ];
+
+    // Create messaging indexes
+    for (const index of messagingIndexes) {
+      await db.collection(index.collectionGroup).doc('_dummy_').set({});
+      console.log(`Created index for ${index.collectionGroup}`);
+    }
+
+    console.log('Messaging indexes created successfully');
+    
     // Indexes for patients collection
     const patientsIndexes = [
       {
@@ -88,16 +116,9 @@ async function createIndexes() {
 
   } catch (error) {
     console.error('Error creating indexes:', error);
+    process.exit(1);
   }
 }
 
-// Run the index creation
-createIndexes()
-  .then(() => {
-    console.log('\nIndex creation process completed');
-    process.exit(0);
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    process.exit(1);
-  });
+// Execute the createIndexes function
+createIndexes().catch(console.error);

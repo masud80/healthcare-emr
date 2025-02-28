@@ -1,15 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { fetchPharmacies } from '../../redux/slices/pharmacySlice';
-import { Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Dialog } from '@mui/material';
-import CreatePharmacy from './CreatePharmacy';
+import { Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
 
 const PharmacyList = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const pharmacies = useSelector(state => state.pharmacy.pharmacies);
   const status = useSelector(state => state.pharmacy.status);
-  const [open, setOpen] = useState(false);
-  const [selectedPharmacy, setSelectedPharmacy] = useState(null);
 
   useEffect(() => {
     if (status === 'idle') {
@@ -18,18 +17,11 @@ const PharmacyList = () => {
   }, [status, dispatch]);
 
   const handleAddNew = () => {
-    setSelectedPharmacy(null);
-    setOpen(true);
+    navigate('/admin/pharmacies/create');
   };
 
   const handleEdit = (pharmacy) => {
-    setSelectedPharmacy(pharmacy);
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-    setSelectedPharmacy(null);
+    navigate(`/admin/pharmacies/${pharmacy.id}/edit`);
   };
 
   if (status === 'loading') {
@@ -78,13 +70,6 @@ const PharmacyList = () => {
           </TableBody>
         </Table>
       </TableContainer>
-
-      <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-        <CreatePharmacy
-          onClose={handleClose}
-          pharmacy={selectedPharmacy}
-        />
-      </Dialog>
     </div>
   );
 };

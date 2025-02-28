@@ -16,9 +16,16 @@ import {
   Select,
   MenuItem,
   Chip,
-  OutlinedInput
+  OutlinedInput,
+  Alert,
+  LinearProgress,
+  IconButton
 } from '@mui/material';
-import { db } from '../../firebase/config';
+import { db, auth, storage } from '../../firebase/config';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import FileUploadIcon from '@mui/icons-material/FileUpload';
+import DownloadIcon from '@mui/icons-material/Download';
+import DeleteIcon from '@mui/icons-material/Delete';
 import VisitList from '../visits/VisitList';
 import { setSelectedPatient, fetchPatientDetails } from '../../redux/slices/patientsSlice';
 import { fetchFacilities } from '../../redux/thunks/facilitiesThunks';
@@ -58,7 +65,9 @@ const PatientDetails = () => {
     allergies: [],
     chronicConditions: []
   });
-  const [error, setError] = useState(null);
+  const [formError, setFormError] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
 
   const validateEmailForUpdate = async (email) => {
     if (!email) return true;
@@ -125,30 +134,57 @@ const [editedEmergencyContact, setEditedEmergencyContact] = useState({});
 
   const handleUpdateBasicInfo = async () => {
     try {
+      // Check if user has appropriate role
+      if (!['admin', 'doctor', 'nurse'].includes(role)) {
+        setFormError('You do not have permission to update patient information');
+        return;
+      }
+
       // Validate email before update
       if (editedBasicInfo.email) {
         const isEmailValid = await validateEmailForUpdate(editedBasicInfo.email);
         if (!isEmailValid) {
-          setError('This email is already registered to another patient');
+          setFormError('This email is already registered to another patient');
           return;
         }
       }
 
-      await updateDoc(doc(db, 'patients', id), {
-        ...editedBasicInfo,
-        email: editedBasicInfo.email?.toLowerCase(),
-        updatedAt: new Date().toISOString()
-      });
-      
-      dispatch(setSelectedPatient({
-        ...selectedPatient,
-        ...editedBasicInfo
-      }));
+      // Create update object with only changed fields
+      const updateData = {};
+      if (editedBasicInfo.dateOfBirth !== selectedPatient.dateOfBirth) {
+        updateData.dateOfBirth = editedBasicInfo.dateOfBirth;
+      }
+      if (editedBasicInfo.gender !== selectedPatient.gender) {
+        updateData.gender = editedBasicInfo.gender;
+      }
+      if (editedBasicInfo.contact !== selectedPatient.contact) {
+        updateData.contact = editedBasicInfo.contact;
+      }
+      if (editedBasicInfo.email?.toLowerCase() !== selectedPatient.email?.toLowerCase()) {
+        updateData.email = editedBasicInfo.email?.toLowerCase();
+      }
+      if (editedBasicInfo.address !== selectedPatient.address) {
+        updateData.address = editedBasicInfo.address;
+      }
+
+      // Only update if there are changes
+      if (Object.keys(updateData).length > 0) {
+        updateData.updatedAt = new Date().toISOString();
+        updateData.updatedBy = auth.currentUser.uid;
+
+        await updateDoc(doc(db, 'patients', id), updateData);
+        
+        dispatch(setSelectedPatient({
+          ...selectedPatient,
+          ...updateData
+        }));
+      }
+
       setEditingBasicInfo(false);
-      setError(null);
+      setFormError(null);
     } catch (error) {
       console.error('Error updating basic information:', error);
-      setError('Failed to update patient information');
+      setFormError('Failed to update patient information');
     }
   };
 
@@ -210,6 +246,88 @@ const [editedEmergencyContact, setEditedEmergencyContact] = useState({});
       setOpenNoteDialog(false);
     } catch (error) {
       console.error('Error adding note:', error);
+    }
+  };
+
+  const handleFileUpload = async (event) => {
+    try {
+      setUploading(true);
+      setUploadError(null);
+      const file = event.target.files[0];
+      
+      if (!file) return;
+
+      // Validate file type
+      const allowedTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'image/jpeg',
+        'image/png',
+        'image/gif'
+      ];
+      
+      if (!allowedTypes.includes(file.type)) {
+        setUploadError('Invalid file type. Please upload PDF, Word, or image files.');
+        return;
+      }
+
+      // Create file reference
+      const timestamp = new Date().getTime();
+      const storageRef = ref(storage, `patients/${id}/documents/${timestamp}_${file.name}`);
+      
+      // Upload file
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+
+      // Update Firestore with document metadata
+      const newDocument = {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        url: downloadURL,
+        uploadedAt: new Date().toISOString(),
+        uploadedBy: auth.currentUser.uid,
+        path: storageRef.fullPath
+      };
+
+      const updatedDocs = [...(selectedPatient.documents || []), newDocument];
+      
+      await updateDoc(doc(db, 'patients', id), {
+        documents: updatedDocs
+      });
+
+      dispatch(setSelectedPatient({
+        ...selectedPatient,
+        documents: updatedDocs
+      }));
+
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      setUploadError('Failed to upload document. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteDocument = async (document) => {
+    try {
+      // Delete from Storage
+      const fileRef = ref(storage, document.path);
+      await deleteObject(fileRef);
+
+      // Update Firestore
+      const updatedDocs = selectedPatient.documents.filter(doc => doc.path !== document.path);
+      await updateDoc(doc(db, 'patients', id), {
+        documents: updatedDocs
+      });
+
+      dispatch(setSelectedPatient({
+        ...selectedPatient,
+        documents: updatedDocs
+      }));
+    } catch (error) {
+      console.error('Error deleting document:', error);
     }
   };
 
@@ -276,6 +394,12 @@ const [editedEmergencyContact, setEditedEmergencyContact] = useState({});
             onClick={() => setTabValue(4)}
           >
             Visits
+          </button>
+          <button 
+            className={`tab ${tabValue === 5 ? 'active' : ''}`}
+            onClick={() => setTabValue(5)}
+          >
+            Documents
           </button>
         </div>
 
@@ -391,11 +515,17 @@ const [editedEmergencyContact, setEditedEmergencyContact] = useState({});
                         value={editedBasicInfo.email}
                         onChange={(e) => setEditedBasicInfo({...editedBasicInfo, email: e.target.value})}
                       />
+                      {formError && (
+                        <div className="error-message" style={{ color: 'red', marginTop: '0.5rem' }}>
+                          {formError}
+                        </div>
+                      )}
                     </div>
                     <div style={{ marginBottom: '1rem' }}>
-                      <label>Address</label>
+                      <label htmlFor="address">Address</label>
                       <input
                         type="text"
+                        id="address"
                         className="input"
                         value={editedBasicInfo.address}
                         onChange={(e) => setEditedBasicInfo({...editedBasicInfo, address: e.target.value})}
@@ -708,6 +838,88 @@ const [editedEmergencyContact, setEditedEmergencyContact] = useState({});
 
         <TabPanel value={tabValue} index={4}>
           <VisitList patientId={id} />
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={5}>
+          {['admin', 'doctor', 'nurse', 'facility_admin'].includes(role) && (
+            <div className="flex flex-between flex-center" style={{ marginBottom: '2rem' }}>
+              <h2 className="subtitle">Documents</h2>
+              <Button
+                variant="contained"
+                component="label"
+                startIcon={<FileUploadIcon />}
+                disabled={uploading}
+                sx={{ 
+                  backgroundColor: '#1a237e',
+                  '&:hover': {
+                    backgroundColor: '#0d47a1'
+                  }
+                }}
+              >
+                Upload Document
+                <input
+                  type="file"
+                  hidden
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
+                  onChange={handleFileUpload}
+                />
+              </Button>
+            </div>
+          )}
+
+          {uploadError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {uploadError}
+            </Alert>
+          )}
+
+          {uploading && (
+            <LinearProgress sx={{ mb: 2 }} />
+          )}
+
+          <div className="documents-list">
+            {selectedPatient.documents?.length === 0 ? (
+              <Typography variant="body1">No documents uploaded yet.</Typography>
+            ) : (
+              <Grid container spacing={2}>
+                {selectedPatient.documents?.map((document, index) => (
+                  <Grid item xs={12} key={index}>
+                    <Paper
+                      sx={{
+                        p: 2,
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <div>
+                        <Typography variant="subtitle1">{document.name}</Typography>
+                        <Typography variant="body2" color="textSecondary">
+                          Uploaded on {new Date(document.uploadedAt).toLocaleDateString()}
+                        </Typography>
+                      </div>
+                      <div>
+                        <IconButton
+                          onClick={() => window.open(document.url, '_blank')}
+                          title="Download"
+                        >
+                          <DownloadIcon />
+                        </IconButton>
+                        {['admin', 'doctor', 'nurse', 'facility_admin'].includes(role) && (
+                          <IconButton
+                            onClick={() => handleDeleteDocument(document)}
+                            title="Delete"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        )}
+                      </div>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            )}
+          </div>
         </TabPanel>
       </div>
 

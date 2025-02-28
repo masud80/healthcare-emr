@@ -351,3 +351,16 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Documents styles */
+.documents-list {
+  margin-top: 1rem;
+}
+
+.documents-list .MuiPaper-root:hover {
+  background-color: #f5f5f5;
+}
+
+.documents-list .MuiIconButton-root {
+  margin-left: 0.5rem;
+}

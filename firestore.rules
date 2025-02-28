@@ -15,6 +15,18 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'facility_admin';
     }
 
+    function isDoctor() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'doctor';
+    }
+
+    function isNurse() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'nurse';
+    }
+
+    function canManageDocuments() {
+      return isAdmin() || isFacilityAdmin() || isDoctor() || isNurse();
+    }
+
     function hasUserFacilityAccess(facilityId) {
       return exists(/databases/$(database)/documents/facilityUsers/$(request.auth.uid)) &&
         facilityId in get(/databases/$(database)/documents/facilityUsers/$(request.auth.uid)).data.facilities;
@@ -66,9 +78,16 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAdmin() || isFacilityAdmin() && 
         (request.resource.data.email == null || isEmailUnique(request.resource.data.email));
-      allow update: if (isAdmin() || isFacilityAdmin()) && 
-        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['email']) || 
-        isEmailUnique(request.resource.data.email));
+      allow update: if 
+        isAuthenticated() && (
+          (isAdmin() || isFacilityAdmin()) && 
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['email']) || 
+          isEmailUnique(request.resource.data.email))
+          ||
+          // Allow document updates for authorized roles
+          (canManageDocuments() && 
+           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['documents', 'updatedAt', 'updatedBy']))
+        );
     }
 
     // Patient data access
@@ -123,6 +142,39 @@ service cloud.firestore {
         isFacilityAdmin() ||
         request.auth.uid == resource.data.doctorId
       );
+    }
+
+    match /messageThreads/{threadId} {
+      function isHealthcareStaff() {
+        return request.auth.token.role in ['doctor', 'nurse', 'admin'];
+      }
+
+      allow read: if isAuthenticated() && (
+        request.auth.uid in resource.data.participants ||
+        isHealthcareStaff()
+      );
+      
+      allow create: if isAuthenticated() && 
+        isHealthcareStaff() &&
+        request.resource.data.keys().hasAll(['subject', 'participants', 'createdAt', 'createdBy', 'lastMessageAt']);
+      
+      allow update: if isAuthenticated() && 
+        isHealthcareStaff() &&
+        request.auth.uid in resource.data.participants;
+    }
+
+    match /messages/{messageId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid in get(/databases/$(database)/documents/messageThreads/$(resource.data.threadId)).data.participants ||
+        isHealthcareStaff()
+      );
+      
+      allow create: if isAuthenticated() && 
+        request.auth.uid in get(/databases/$(database)/documents/messageThreads/$(request.resource.data.threadId)).data.participants &&
+        request.resource.data.keys().hasAll(['threadId', 'content', 'sentAt', 'sentBy']);
+      
+      allow update: if false; // Messages cannot be edited
+      allow delete: if false; // Messages cannot be deleted
     }
 
     // Default deny
