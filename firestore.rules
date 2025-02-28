@@ -53,6 +53,20 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // Bills collection
+    match /bills/{billId} {
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        (isFacilityAdmin() && 
+         resource.data.facilityId in get(/databases/$(database)/documents/user_facilities/$(request.auth.uid)).data.facilities)
+      );
+      allow create, update, delete: if isAuthenticated() && (
+        isAdmin() ||
+        (isFacilityAdmin() && 
+         request.resource.data.facilityId in get(/databases/$(database)/documents/user_facilities/$(request.auth.uid)).data.facilities)
+      );
+    }
+
     // Default Permissions collection
     match /defaultpermissions/{roleId} {
       allow read: if isAuthenticated();
@@ -210,6 +224,29 @@ service cloud.firestore {
       allow create: if isAuthenticated() && 
         request.auth.uid in get(/databases/$(database)/documents/messageThreads/$(request.resource.data.threadId)).data.participants &&
         request.resource.data.keys().hasAll(['threadId', 'content', 'sentAt', 'sentBy']);
+    }
+
+    // Notifications collection
+    match /AlertsNotifications/{notificationId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        isAdmin()
+      );
+      
+      allow create: if isAuthenticated() && (
+        isAdmin() ||
+        request.auth.uid == request.resource.data.userId
+      );
+      
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        isAdmin()
+      );
+      
+      allow delete: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId ||
+        isAdmin()
+      );
     }
 
     // Default deny

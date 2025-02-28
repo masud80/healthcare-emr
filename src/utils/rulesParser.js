@@ -13,40 +13,44 @@ const DEFAULT_PERMISSIONS = {
     appointments: { read: true, write: true, create: true, update: true, delete: true },
     prescriptions: { read: true, write: true, create: true, update: true, delete: true },
     messages: { read: true, write: true, create: true, update: true, delete: true },
-    messageThreads: { read: true, write: true, create: true, update: true, delete: true }
+    messageThreads: { read: true, write: true, create: true, update: true, delete: true },
+    bills: { read: true, write: true, create: true, update: true, delete: true }
   },
   facility_admin: {
     facilities: { read: true, write: false, create: false, update: true, delete: false },
     user_facilities: { read: true, write: true, create: true, update: true, delete: true },
     users: { read: true, write: false, create: false, update: true, delete: false },
     patients: { read: true, write: true, create: true, update: true, delete: false },
-    visits: { read: true, write: true, create: true, update: true, delete: false },
-    appointments: { read: true, write: true, create: true, update: true, delete: false },
-    prescriptions: { read: true, write: true, create: true, update: true, delete: false },
-    messages: { read: true, write: true, create: true, update: true, delete: false },
-    messageThreads: { read: true, write: true, create: true, update: true, delete: false }
+    visits: { read: true, write: true, create: true, update: true, delete: true },
+    appointments: { read: true, write: true, create: true, update: true, delete: true },
+    prescriptions: { read: true, write: true, create: true, update: true, delete: true },
+    messages: { read: true, write: true, create: true, update: true, delete: true },
+    messageThreads: { read: true, write: true, create: true, update: true, delete: true },
+    bills: { read: true, write: true, create: true, update: true, delete: true }
   },
   doctor: {
     facilities: { read: true, write: false, create: false, update: false, delete: false },
     user_facilities: { read: true, write: false, create: false, update: false, delete: false },
-    users: { read: true, write: false, create: false, update: false, delete: false },
+    users: { read: false, write: false, create: false, update: false, delete: false },
     patients: { read: true, write: true, create: false, update: true, delete: false },
     visits: { read: true, write: true, create: true, update: true, delete: false },
     appointments: { read: true, write: true, create: true, update: true, delete: false },
     prescriptions: { read: true, write: true, create: true, update: true, delete: false },
     messages: { read: true, write: true, create: true, update: true, delete: false },
-    messageThreads: { read: true, write: true, create: true, update: true, delete: false }
+    messageThreads: { read: true, write: true, create: true, update: true, delete: false },
+    bills: { read: true, write: false, create: false, update: false, delete: false }
   },
   nurse: {
     facilities: { read: true, write: false, create: false, update: false, delete: false },
     user_facilities: { read: true, write: false, create: false, update: false, delete: false },
-    users: { read: true, write: false, create: false, update: false, delete: false },
+    users: { read: false, write: false, create: false, update: false, delete: false },
     patients: { read: true, write: true, create: false, update: true, delete: false },
     visits: { read: true, write: true, create: true, update: true, delete: false },
     appointments: { read: true, write: true, create: true, update: true, delete: false },
-    prescriptions: { read: true, write: false, create: false, update: false, delete: false },
+    prescriptions: { read: true, write: true, create: true, update: true, delete: false },
     messages: { read: true, write: true, create: true, update: true, delete: false },
-    messageThreads: { read: true, write: true, create: true, update: true, delete: false }
+    messageThreads: { read: true, write: true, create: true, update: true, delete: false },
+    bills: { read: true, write: false, create: false, update: false, delete: false }
   }
 };
 
@@ -100,63 +104,93 @@ export const mergePermissions = async () => {
   }
 };
 
+// Helper function to check if a rule string indicates permission
+const hasPermission = (ruleString, role, operation) => {
+  const operationPatterns = {
+    read: /allow\s+read\s*:/,
+    write: /allow\s+write\s*:/,
+    create: /allow\s+create(?:\s*,\s*update\s*,\s*delete)?\s*:/,
+    update: /allow\s+(?:create\s*,\s*)?update(?:\s*,\s*delete)?\s*:/,
+    delete: /allow\s+(?:create\s*,\s*update\s*,\s*)?delete\s*:/
+  };
+
+  // Check if the operation is allowed
+  const operationMatch = operationPatterns[operation].test(ruleString);
+  if (!operationMatch) return false;
+
+  // Extract the condition after "if"
+  const conditionMatch = ruleString.match(new RegExp(`allow\\s+(?:${operation}|[\\w\\s,]+${operation}[\\w\\s,]*)\\s*:\\s*if\\s+([^;]+)`, 's'));
+  if (!conditionMatch) return false;
+
+  const condition = conditionMatch[1];
+
+  // Split by OR operator and check each clause
+  const clauses = condition.split(/\s*\|\|\s*/);
+  
+  // Admin has access if isAdmin() appears in any clause
+  if (role === 'admin' && condition.includes('isAdmin()')) {
+    return true;
+  }
+
+  // For other roles, check each clause for their function
+  for (const clause of clauses) {
+    switch (role) {
+      case 'facility_admin':
+        if (clause.includes('isFacilityAdmin()')) return true;
+        break;
+      case 'doctor':
+        if (clause.includes('isDoctor()')) return true;
+        break;
+      case 'nurse':
+        if (clause.includes('isNurse()')) return true;
+        break;
+    }
+  }
+
+  return false;
+};
+
 // Function to parse the rules file and extract permissions
 const parseRules = (rulesContent) => {
-  const permissions = {
-    admin: {},
-    facility_admin: {},
-    doctor: {},
-    nurse: {}
-  };
-
-  const collections = [
-    'facilities',
-    'user_facilities',
-    'users',
-    'patients',
-    'visits',
-    'appointments',
-    'prescriptions',
-    'messages',
-    'messageThreads'
-  ];
-
+  const collections = ['facilities', 'user_facilities', 'users', 'patients', 'visits', 'appointments', 'prescriptions', 'messages', 'messageThreads', 'bills'];
+  const roles = ['admin', 'facility_admin', 'doctor', 'nurse'];
   const operations = ['read', 'write', 'create', 'update', 'delete'];
 
-  // Helper function to check if a rule string indicates permission
-  const hasPermission = (ruleString, role, operation) => {
-    const rolePatterns = {
-      admin: /isAdmin\(\)/,
-      facility_admin: /isFacilityAdmin\(\)/,
-      doctor: /isDoctor\(\)/,
-      nurse: /isNurse\(\)/
-    };
+  const permissions = {};
 
-    const operationPatterns = {
-      read: /allow read:/,
-      write: /allow write:/,
-      create: /allow create:/,
-      update: /allow update:/,
-      delete: /allow delete:/
-    };
-
-    return rolePatterns[role].test(ruleString) && operationPatterns[operation].test(ruleString);
-  };
-
-  // Parse each collection's rules
-  collections.forEach(collection => {
-    const collectionMatch = rulesContent.match(new RegExp(`match /${collection}/\\{[^}]+\\} \\{([^}]+)\\}`, 's'));
-    if (collectionMatch) {
-      const collectionRules = collectionMatch[1];
-
-      Object.keys(permissions).forEach(role => {
-        permissions[role][collection] = {};
-        operations.forEach(operation => {
-          permissions[role][collection][operation] = hasPermission(collectionRules, role, operation);
-        });
-      });
-    }
+  // Initialize permissions with defaults
+  roles.forEach(role => {
+    permissions[role] = {};
+    collections.forEach(collection => {
+      permissions[role][collection] = {
+        read: false,
+        write: false,
+        create: false,
+        update: false,
+        delete: false
+      };
+    });
   });
+
+  // Parse rules for each collection
+  collections.forEach(collection => {
+    // Find the collection rules block
+    const collectionMatch = rulesContent.match(new RegExp(`match\\s*/${collection}/\\{[^}]*\\}\\s*\\{([^}]+)\\}`, 'gs'));
+    if (!collectionMatch) return;
+
+    const collectionRules = collectionMatch[0];
+
+    // For each role and operation, check if it's allowed
+    roles.forEach(role => {
+      operations.forEach(operation => {
+        if (hasPermission(collectionRules, role, operation)) {
+          permissions[role][collection][operation] = true;
+        }
+      });
+    });
+  });
+
+ 
 
   return permissions;
 };

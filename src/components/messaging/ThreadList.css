@@ -2,25 +2,29 @@
   margin-top: 20px;
   background-color: #ffffff;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: 1px solid #ddd;
 }
 
 .thread-list-title {
   padding: 16px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #ddd;
+  background-color: #fafafa;
 }
 
 .thread-list-item {
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid #ddd;
   padding: 12px 16px;
+  transition: all 0.2s ease;
 }
 
 .thread-list-item:hover {
-  background-color: #f8f9fa;
+  background-color: #f5f7fa;
 }
 
 .thread-list-item.Mui-selected {
   background-color: #e3f2fd !important;
+  border-left: 4px solid #1976d2;
 }
 
 .thread-list-item.Mui-selected:hover {

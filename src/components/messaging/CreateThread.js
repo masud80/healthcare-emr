@@ -5,11 +5,14 @@ import { createThread } from '../../utils/messaging';
 import { useSelector } from 'react-redux';
 import { selectUser } from '../../redux/slices/authSlice';
 import './CreateThread.css';
+import { getDoc, doc } from 'firebase/firestore';
+import { db } from '../../firebase/config';
 
 const CreateThread = ({ onThreadCreated }) => {
   const [selectedParticipants, setSelectedParticipants] = useState([]);
   const [showParticipantSearch, setShowParticipantSearch] = useState(false);
   const currentUser = useSelector(selectUser);
+  const [loading, setLoading] = useState(false);
 
   const handleAddParticipant = (participant) => {
     if (!selectedParticipants.find(p => p.id === participant.id)) {
@@ -28,7 +31,24 @@ const CreateThread = ({ onThreadCreated }) => {
     }
 
     try {
-      const participants = [...selectedParticipants, currentUser];
+      setLoading(true);
+      // Get current user's complete data from Firestore
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      if (!userDoc.exists()) {
+        throw new Error('Current user data not found');
+      }
+      const userData = userDoc.data();
+      
+      // Format current user data to match participant structure
+      const formattedCurrentUser = {
+        id: currentUser.uid,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        email: userData.email || currentUser.email,
+        role: userData.role
+      };
+      
+      const participants = [...selectedParticipants, formattedCurrentUser];
       const threadRef = await createThread(participants);
       if (onThreadCreated) {
         onThreadCreated();
@@ -36,6 +56,8 @@ const CreateThread = ({ onThreadCreated }) => {
     } catch (error) {
       console.error('Error creating thread:', error);
       alert('Failed to create thread');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,6 +70,7 @@ const CreateThread = ({ onThreadCreated }) => {
           color="primary"
           onClick={() => setShowParticipantSearch(true)}
           className="add-participant-btn"
+          disabled={loading}
         >
           Add Participants
         </Button>
@@ -62,10 +85,13 @@ const CreateThread = ({ onThreadCreated }) => {
           <h3>Selected Participants:</h3>
           {selectedParticipants.map(participant => (
             <div key={participant.id} className="participant-chip">
-              {participant.name}
+              {participant.firstName && participant.lastName 
+                ? `${participant.firstName} ${participant.lastName}`
+                : participant.email}
               <Button
                 size="small"
                 onClick={() => handleRemoveParticipant(participant.id)}
+                disabled={loading}
               >
                 Remove
               </Button>
@@ -76,6 +102,7 @@ const CreateThread = ({ onThreadCreated }) => {
             color="primary"
             onClick={handleCreateThread}
             className="create-thread-btn"
+            disabled={loading}
           >
             Create Thread
           </Button>

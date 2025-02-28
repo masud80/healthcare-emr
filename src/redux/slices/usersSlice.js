@@ -14,6 +14,17 @@ export const fetchAvailableUsers = createAsyncThunk(
         throw new Error('No authenticated user found');
       }
 
+      // Helper function to convert Firestore timestamps
+      const convertTimestamps = (obj) => {
+        const newObj = { ...obj };
+        for (const [key, value] of Object.entries(newObj)) {
+          if (value && typeof value === 'object' && value.toDate instanceof Function) {
+            newObj[key] = value.toDate().toISOString();
+          }
+        }
+        return newObj;
+      };
+
       // If user is admin, fetch all users
       if (userRole === 'admin') {
         const usersRef = collection(db, 'users');
@@ -24,8 +35,7 @@ export const fetchAvailableUsers = createAsyncThunk(
         const snapshot = await getDocs(q);
         return snapshot.docs.map(doc => ({
           id: doc.id,
-          ...doc.data(),
-          name: `${doc.data().firstName} ${doc.data().lastName} (${doc.data().role})`
+          ...convertTimestamps(doc.data())
         }));
       }
 
@@ -68,8 +78,7 @@ export const fetchAvailableUsers = createAsyncThunk(
       
       return usersSnapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data(),
-        name: `${doc.data().firstName} ${doc.data().lastName} (${doc.data().role})`
+        ...convertTimestamps(doc.data())
       }));
 
     } catch (error) {

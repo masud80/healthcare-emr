@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import { selectUser, selectRole } from '../../redux/slices/authSlice';
 import FacilityFilter from '../facilities/FacilityFilter';
 import GlobalSearch from '../search/GlobalSearch';
+import NotificationBell from '../notifications/NotificationBell';
 import { 
   AppBar, 
   Box, 
@@ -74,7 +75,7 @@ const Layout = () => {
   const navigate = useNavigate();
   const user = useSelector(selectUser);
   const role = useSelector(selectRole);
-  console.log('Current user role:', role); // Add this line to debug
+  console.log('Current user role:', role);
   const [facilityBranding, setFacilityBranding] = useState(null);
 
   useEffect(() => {
@@ -243,6 +244,14 @@ const Layout = () => {
                         <ListItemText primary="Role Permissions" />
                       </ListItemButton>
                     </ListItem>
+                    <ListItem component="div">
+                      <ListItemButton onClick={() => navigate('/admin/facility-groups')} sx={{ pl: 4 }}>
+                        <ListItemIcon>
+                          <BusinessIcon />
+                        </ListItemIcon>
+                        <ListItemText primary="Facility Groups" />
+                      </ListItemButton>
+                    </ListItem>
                   </>
                 )}
               </List>
@@ -251,9 +260,9 @@ const Layout = () => {
         )}
         <ListItem component="div">
           <ListItemButton 
-            onClick={() => navigate('/billing')}
+            onClick={() => navigate(role === 'admin' ? '/admin/billing' : '/billing')}
             sx={drawerStyles.listItem}
-            selected={window.location.pathname === '/billing'}
+            selected={window.location.pathname.includes('billing')}
           >
             <ListItemIcon>
               <AssessmentIcon />
@@ -357,7 +366,8 @@ const Layout = () => {
           <Box sx={{ flex: 2, display: 'flex', justifyContent: 'center' }}>
             <GlobalSearch />
           </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, justifyContent: 'flex-end', gap: 2 }}>
+            {user && <NotificationBell />}
             <FacilityFilter />
           </Box>
         </Toolbar>

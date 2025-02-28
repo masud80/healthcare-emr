@@ -18,6 +18,8 @@ const roles = ['admin', 'facility_admin', 'doctor', 'nurse'];
 const collections = [
   'facilities',
   'user_facilities',
+  'facilityGroups',
+  'bills',
   'users',
   'patients',
   'visits',

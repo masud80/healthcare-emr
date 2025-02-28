@@ -19,15 +19,17 @@ import { db } from '../../firebase/config';
 
 const roles = ['admin', 'facility_admin', 'doctor', 'nurse'];
 const collections = [
+  'appointments',
+  'bills',
   'facilities',
+  'facilityGroups',
+  'messages',
+  'messageThreads',
+  'patients',
+  'prescriptions',
   'user_facilities',
   'users',
-  'patients',
-  'visits',
-  'appointments',
-  'prescriptions',
-  'messages',
-  'messageThreads'
+  'visits'
 ];
 
 const operations = ['read', 'write', 'create', 'update', 'delete'];

@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { 
   Box, 
@@ -15,32 +14,59 @@ import {
   ListItemText,
   Divider,
   CircularProgress,
-  Autocomplete
+  Autocomplete,
+  Paper,
+  IconButton,
+  Avatar
 } from '@mui/material';
-import { PersonAdd as PersonAddIcon } from '@mui/icons-material';
-import { selectRole } from '../../redux/slices/authSlice';
+import { PersonAdd as PersonAddIcon, Send as SendIcon } from '@mui/icons-material';
+import { selectRole, selectUser } from '../../redux/slices/authSlice';
 import { fetchAvailableUsers } from '../../redux/slices/usersSlice';
 import { fetchThreadMessages, sendMessage } from '../../redux/slices/messagingSlice';
-import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { addSystemMessage } from '../../utils/messaging';
+import './ThreadDetails.css';
 
-const ThreadDetails = () => {
-  const { threadId } = useParams();
+const ThreadDetails = ({ threadId }) => {
   const dispatch = useDispatch();
   const role = useSelector(selectRole);
+  const currentUser = useSelector(selectUser);
   
   const [newMessage, setNewMessage] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedParticipants, setSelectedParticipants] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [thread, setThread] = useState(null);
+  const [userData, setUserData] = useState(null);
+  const messagesEndRef = useRef(null);
+  const [loading, setLoading] = useState(true);
   
-  // Debug log
-  console.log('Current role:', role);
+  // Fetch complete user data
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!currentUser?.uid) return;
+      
+      try {
+        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+        if (userDoc.exists()) {
+          setUserData(userDoc.data());
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    fetchUserData();
+  }, [currentUser?.uid]);
+
+  // Debug logs
+  console.log('Current user:', currentUser);
+  console.log('User data:', userData);
   console.log('Can manage participants:', ['admin', 'doctor', 'nurse'].includes(role));
 
   const currentThread = useSelector(state => state.messaging.currentThread);
   const availableUsers = useSelector(state => state.users.availableUsers);
-  const loading = useSelector(state => state.messaging.loading);
 
   useEffect(() => {
     dispatch(fetchAvailableUsers());
@@ -51,18 +77,63 @@ const ThreadDetails = () => {
 
   // Filter out users who are already participants
   const availableParticipants = availableUsers.filter(user => 
-    !currentThread?.participants.includes(user.id)
+    !currentThread?.participants?.some(p => p.id === user.id)
   );
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    if (!threadId) return;
+
+    // Subscribe to thread details
+    const threadRef = doc(db, 'messageThreads', threadId);
+    const unsubThread = onSnapshot(threadRef, (doc) => {
+      if (doc.exists()) {
+        setThread(doc.data());
+      }
+    });
+
+    // Subscribe to messages
+    const messagesRef = collection(db, 'messages');
+    const q = query(
+      messagesRef,
+      where('threadId', '==', threadId),
+      orderBy('sentAt', 'asc')
+    );
+
+    const unsubMessages = onSnapshot(q, (snapshot) => {
+      const messageList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setMessages(messageList);
+      setLoading(false);
+      scrollToBottom();
+    });
+
+    return () => {
+      unsubThread();
+      unsubMessages();
+    };
+  }, [threadId]);
 
   const handleAddParticipants = async () => {
     try {
       const threadRef = doc(db, 'messageThreads', threadId);
       
+      const participantsToAdd = selectedParticipants.map(p => ({
+        id: p.id,
+        name: p.firstName && p.lastName ? `${p.firstName} ${p.lastName}` : p.email,
+        role: p.role
+      }));
+
       await updateDoc(threadRef, {
-        participants: arrayUnion(...selectedParticipants.map(p => p.id))
+        participants: arrayUnion(...participantsToAdd)
       });
 
-      const participantNames = selectedParticipants.map(p => p.name).join(', ');
+      const participantNames = participantsToAdd.map(p => p.name).join(', ');
       await addSystemMessage(threadId, `Added participants: ${participantNames}`);
 
       setSelectedParticipants([]);
@@ -75,13 +146,46 @@ const ThreadDetails = () => {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || !userData) return;
 
-    await dispatch(sendMessage({
-      threadId,
-      content: newMessage
-    }));
-    setNewMessage('');
+    try {
+      // Use userData for sender name
+      const senderName = userData.firstName && userData.lastName 
+        ? `${userData.firstName} ${userData.lastName}`
+        : userData.email || currentUser.email;
+
+      const messageData = {
+        threadId,
+        content: newMessage.trim(),
+        sentAt: serverTimestamp(),
+        sentBy: currentUser.uid,
+        senderName,
+        type: 'message'
+      };
+
+      await addDoc(collection(db, 'messages'), messageData);
+
+      // Update thread's last message
+      await updateDoc(doc(db, 'messageThreads', threadId), {
+        lastMessage: newMessage.trim(),
+        lastMessageAt: serverTimestamp()
+      });
+
+      setNewMessage('');
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
+  };
+
+  const formatDate = (timestamp) => {
+    if (!timestamp) return '';
+    const date = timestamp.toDate();
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric'
+    }).format(date);
   };
 
   if (loading) {
@@ -93,55 +197,64 @@ const ThreadDetails = () => {
   }
 
   return (
-    <Box p={3}>
-      <Box display="flex" alignItems="center" mb={3}>
-        <Typography variant="h5" component="h1">
-          {currentThread?.subject || 'Thread Details'}
-        </Typography>
-        {canManageParticipants && (
-          <Button
-            startIcon={<PersonAddIcon />}
-            variant="outlined"
-            onClick={() => setOpenDialog(true)}
-            sx={{ ml: 2 }}
-          >
-            Add Participants
-          </Button>
-        )}
-      </Box>
+    <Box className="thread-details-container">
+      {thread && (
+        <Box className="thread-header">
+          <Typography variant="h6">
+            {thread.subject || 'Conversation'}
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            {thread.participantDetails
+              .filter(p => p.id !== currentUser.uid)
+              .map(p => p.name)
+              .join(', ')}
+          </Typography>
+        </Box>
+      )}
 
-      {/* Messages List */}
-      <List>
-        {currentThread?.messages?.map((message, index) => (
-          <React.Fragment key={message.id}>
-            <ListItem>
-              <ListItemText
-                primary={message.content}
-                secondary={`${message.senderName || 'Unknown'} - ${new Date(message.sentAt?.toDate()).toLocaleString()}`}
-              />
-            </ListItem>
-            {index < currentThread.messages.length - 1 && <Divider />}
-          </React.Fragment>
-        ))}
-      </List>
+      <Paper className="messages-container">
+        <List>
+          {messages.map((message, index) => (
+            <React.Fragment key={message.id}>
+              <ListItem className={message.sentBy === currentUser.uid ? 'sent' : 'received'}>
+                <Box className="message-content">
+                  {message.type !== 'system' && (
+                    <Typography variant="caption" className="sender-name">
+                      {message.senderName}
+                    </Typography>
+                  )}
+                  <Paper className={`message-bubble ${message.type === 'system' ? 'system' : ''}`}>
+                    <Typography>{message.content}</Typography>
+                  </Paper>
+                  <Typography variant="caption" className="message-time">
+                    {formatDate(message.sentAt)}
+                  </Typography>
+                </Box>
+              </ListItem>
+              {index < messages.length - 1 && <Divider variant="middle" />}
+            </React.Fragment>
+          ))}
+          <div ref={messagesEndRef} />
+        </List>
+      </Paper>
 
-      {/* Message Input */}
-      <Box component="form" onSubmit={handleSendMessage} sx={{ mt: 2 }}>
+      <Box component="form" onSubmit={handleSendMessage} className="message-input-container">
         <TextField
           fullWidth
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder="Type your message..."
           variant="outlined"
-          sx={{ mb: 2 }}
+          size="small"
         />
-        <Button 
+        <IconButton 
           type="submit" 
-          variant="contained" 
+          color="primary" 
           disabled={!newMessage.trim()}
+          className="send-button"
         >
-          Send Message
-        </Button>
+          <SendIcon />
+        </IconButton>
       </Box>
 
       {/* Add Participants Dialog */}
@@ -150,8 +263,12 @@ const ThreadDetails = () => {
         <DialogContent>
           <Autocomplete
             multiple
-            options={availableUsers || []}
-            getOptionLabel={(option) => option.name || option.email}
+            options={availableParticipants || []}
+            getOptionLabel={(option) => 
+              option.firstName && option.lastName 
+                ? `${option.firstName} ${option.lastName} (${option.role})`
+                : option.email
+            }
             value={selectedParticipants}
             onChange={(_, newValue) => setSelectedParticipants(newValue)}
             renderInput={(params) => (

@@ -30,15 +30,39 @@ export const updateThreadParticipants = async (threadId, newParticipant) => {
 
 export const createThread = async (participants) => {
   try {
-    const threadRef = await addDoc(collection(db, 'messageThreads'), {
-      participants: participants.map(p => ({
+    // Validate participant data
+    if (!participants || !Array.isArray(participants) || participants.length === 0) {
+      throw new Error('Invalid participants data');
+    }
+
+    // Format participants data, ensuring all required fields are present
+    const formattedParticipants = participants.map(p => {
+      if (!p.id) throw new Error('Participant missing ID');
+      if (!p.role) throw new Error('Participant missing role');
+      
+      // Ensure role is properly formatted
+      const validRoles = ['admin', 'doctor', 'nurse', 'facility_admin'];
+      const role = p.role.toLowerCase();
+      if (!validRoles.includes(role)) {
+        throw new Error(`Invalid role: ${p.role}. Must be one of: ${validRoles.join(', ')}`);
+      }
+      
+      return {
         id: p.id,
-        name: p.name,
-        role: p.role
-      })),
+        name: p.firstName && p.lastName ? `${p.firstName} ${p.lastName}` : p.email,
+        role: role
+      };
+    });
+
+    const threadRef = await addDoc(collection(db, 'messageThreads'), {
+      subject: 'New Thread',
+      participants: formattedParticipants.map(p => p.id), // Store only participant IDs
+      participantDetails: formattedParticipants, // Store full participant details
       createdAt: serverTimestamp(),
+      createdBy: formattedParticipants[formattedParticipants.length - 1].id,
       lastMessage: null,
-      lastMessageAt: null
+      lastMessageAt: serverTimestamp(),
+      isArchived: false
     });
 
     // Add initial system message
@@ -53,12 +77,21 @@ export const createThread = async (participants) => {
 
 export const addSystemMessage = async (threadId, content) => {
   try {
-    const messagesRef = collection(db, 'messageThreads', threadId, 'messages');
+    const messagesRef = collection(db, 'messages');
     await addDoc(messagesRef, {
+      threadId,
       content,
       type: 'system',
       sentAt: serverTimestamp(),
-      senderId: 'system'
+      sentBy: 'system',
+      senderName: 'System'
+    });
+
+    // Update thread's lastMessage
+    const threadRef = doc(db, 'messageThreads', threadId);
+    await updateDoc(threadRef, {
+      lastMessage: content,
+      lastMessageAt: serverTimestamp()
     });
   } catch (error) {
     console.error('Error adding system message:', error);

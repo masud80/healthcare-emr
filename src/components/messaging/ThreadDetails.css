@@ -1,0 +1,82 @@
+.thread-details-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 200px);
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.thread-header {
+  padding: 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.messages-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  background-color: #f5f7fb;
+}
+
+.message-content {
+  max-width: 70%;
+  margin: 8px 0;
+}
+
+.message-bubble {
+  padding: 8px 16px;
+  border-radius: 16px;
+  word-wrap: break-word;
+}
+
+.sent {
+  justify-content: flex-end;
+}
+
+.sent .message-content {
+  margin-left: auto;
+}
+
+.sent .message-bubble {
+  background-color: #1976d2;
+  color: white;
+}
+
+.received .message-bubble {
+  background-color: #fff;
+}
+
+.system .message-bubble {
+  background-color: #f0f0f0;
+  color: #666;
+  font-style: italic;
+  text-align: center;
+}
+
+.sender-name {
+  display: block;
+  margin-bottom: 4px;
+  color: #666;
+}
+
+.message-time {
+  display: block;
+  margin-top: 4px;
+  color: #666;
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.message-input-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  background-color: #fff;
+  border-top: 1px solid #eee;
+}
+
+.send-button {
+  padding: 8px !important;
+} 

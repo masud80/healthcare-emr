@@ -11,17 +11,13 @@ const ThreadList = ({ onThreadSelect, selectedThread }) => {
   const currentUser = useSelector(selectUser);
 
   useEffect(() => {
-    if (!currentUser?.id) return;
+    if (!currentUser?.uid && !currentUser?.id) return;
 
     // Query threads where the current user is a participant
     const threadsRef = collection(db, 'messageThreads');
     const q = query(
       threadsRef,
-      where('participants', 'array-contains', { 
-        id: currentUser.id,
-        name: `${currentUser.firstName} ${currentUser.lastName}`,
-        role: currentUser.role
-      }),
+      where('participants', 'array-contains', currentUser.uid || currentUser.id),
       orderBy('lastMessageAt', 'desc')
     );
 
@@ -30,6 +26,8 @@ const ThreadList = ({ onThreadSelect, selectedThread }) => {
         id: doc.id,
         ...doc.data()
       }));
+      console.log('Current user:', currentUser);
+      console.log('Fetched threads:', threadList);
       setThreads(threadList);
     });
 
@@ -64,10 +62,10 @@ const ThreadList = ({ onThreadSelect, selectedThread }) => {
             <ListItemText
               primary={
                 <Typography variant="subtitle1">
-                  {thread.participants
-                    .filter(p => p.id !== currentUser.id)
+                  {(thread.participantDetails || [])
+                    .filter(p => p.id !== currentUser.uid)
                     .map(p => p.name)
-                    .join(', ')}
+                    .join(', ') || thread.subject || 'Conversation'}
                 </Typography>
               }
               secondary={

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Box, Button, Typography, IconButton } from '@mui/material';
+import { Box, Button, Typography, IconButton, Grid } from '@mui/material';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import CreateThread from './CreateThread';
 import ThreadList from './ThreadList';
+import ThreadDetails from './ThreadDetails';
 import ParticipantSearch from './ParticipantSearch';
 import { selectUser } from '../../redux/slices/authSlice';
 import { updateThreadParticipants } from '../../utils/messaging';
@@ -32,15 +33,6 @@ const MessagingDashboard = () => {
         <Typography variant="h4" gutterBottom>
           Secure Messaging
         </Typography>
-        {selectedThread && (
-          <IconButton 
-            color="primary"
-            onClick={() => setShowAddParticipants(true)}
-            className="add-participant-icon"
-          >
-            <PersonAddIcon />
-          </IconButton>
-        )}
       </Box>
 
       {!showCreateThread ? (
@@ -58,6 +50,22 @@ const MessagingDashboard = () => {
         />
       )}
 
+      <Grid container spacing={2}>
+        <Grid item xs={12} md={4}>
+          <ThreadList 
+            onThreadSelect={(thread) => setSelectedThread(thread)}
+            selectedThread={selectedThread}
+          />
+        </Grid>
+        <Grid item xs={12} md={8}>
+          {selectedThread && (
+            <Box sx={{ height: '100%', bgcolor: 'background.paper', borderRadius: 1, p: 2 }}>
+              <ThreadDetails threadId={selectedThread.id} />
+            </Box>
+          )}
+        </Grid>
+      </Grid>
+
       {showAddParticipants && (
         <Box className="add-participants-modal">
           <ParticipantSearch
@@ -66,11 +74,6 @@ const MessagingDashboard = () => {
           />
         </Box>
       )}
-
-      <ThreadList 
-        onThreadSelect={(thread) => setSelectedThread(thread)}
-        selectedThread={selectedThread}
-      />
     </Box>
   );
 };

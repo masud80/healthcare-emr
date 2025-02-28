@@ -14,7 +14,9 @@ const ParticipantSearch = ({ onSelect, onClose }) => {
   }, [dispatch]);
 
   const filteredUsers = (availableUsers || []).filter(user =>
-    user.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    (user.firstName && user.lastName 
+      ? `${user.firstName} ${user.lastName}`
+      : user.name || user.email)?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -37,7 +39,7 @@ const ParticipantSearch = ({ onSelect, onClose }) => {
         </Button>
       </Box>
       
-      <List className="users-list">
+      <List>
         {loading ? (
           <ListItem>
             <ListItemText primary="Loading users..." />
@@ -54,7 +56,9 @@ const ParticipantSearch = ({ onSelect, onClose }) => {
               className="user-item"
             >
               <ListItemText 
-                primary={user.name}
+                primary={user.firstName && user.lastName 
+                  ? `${user.firstName} ${user.lastName}`
+                  : user.name || user.email}
                 secondary={user.role}
               />
             </ListItem>

@@ -36,6 +36,7 @@ import MessagingDashboard from './components/messaging/MessagingDashboard';
 import ThreadDetails from './components/messaging/ThreadDetails';
 import CreateThread from './components/messaging/CreateThread';
 import RolePermissions from './components/admin/RolePermissions';
+import FacilityGroups from './components/admin/FacilityGroups';
 import './styles/components.css';
 
 function App() {
@@ -78,12 +79,15 @@ function App() {
                     <Route path="facilities/new" element={<CreateFacility />} />
                     <Route path="admin/users" element={<UserManagement />} />
                     <Route path="admin/role-permissions" element={<RolePermissions />} />
+                    <Route path="admin/facility-groups" element={<FacilityGroups />} />
                     <Route path="admin/assign-facility" element={<AssignFacilityTest />} />
                     <Route path="database-init" element={<DatabaseInitializer />} />
                     <Route path="audit" element={<AuditReport />} />
                     <Route path="admin/pharmacies" element={<PharmacyList />} />
                     <Route path="admin/pharmacies/create" element={<CreatePharmacy />} />
                     <Route path="admin/pharmacies/:id/edit" element={<CreatePharmacy />} />
+                    <Route path="admin/billing" element={<BillingDashboard />} />
+                    <Route path="admin/billing/:billId" element={<BillDetails />} />
                   </Route>
 
                   {/* Other authenticated routes */}
