@@ -20,6 +20,8 @@ import { db } from '../../firebase/config';
 const roles = ['admin', 'facility_admin', 'doctor', 'nurse'];
 const collections = [
   'appointments',
+  'AlertsNotifications',
+  'audit',
   'bills',
   'facilities',
   'facilityGroups',

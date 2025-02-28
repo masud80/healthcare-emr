@@ -186,16 +186,14 @@ const NotificationBell = () => {
                     </>
                   }
                 />
-                <ListItemSecondaryAction>
-                  <Button
-                    startIcon={<CheckCircleIcon />}
-                    onClick={(e) => handleMarkComplete(notification.id, e)}
-                    color="primary"
-                    size="small"
-                  >
-                    Mark Complete
-                  </Button>
-                </ListItemSecondaryAction>
+                <Button
+                  className="mark-complete-button"
+                  onClick={(e) => handleMarkComplete(notification.id, e)}
+                  color="primary"
+                  size="small"
+                >
+                  Mark Complete
+                </Button>
               </ListItem>
             ))
           )}

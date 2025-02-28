@@ -1,5 +1,5 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import { collection, addDoc, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, orderBy, Timestamp, limit } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 
 export const createAuditLog = createAsyncThunk(
@@ -26,21 +26,28 @@ export const fetchAuditLogs = createAsyncThunk(
       const auditRef = collection(db, 'audit');
       let constraints = [];
 
-      if (startDate) {
-        constraints.push(where('timestamp', '>=', Timestamp.fromDate(new Date(startDate))));
-      }
-      if (endDate) {
-        constraints.push(where('timestamp', '<=', Timestamp.fromDate(new Date(endDate))));
-      }
-      if (userId) {
-        constraints.push(where('userId', '==', userId));
+      // Add default constraint to get recent logs if no filters are applied
+      if (!startDate && !endDate && !userId) {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        constraints.push(where('timestamp', '>=', Timestamp.fromDate(thirtyDaysAgo)));
+      } else {
+        if (startDate) {
+          constraints.push(where('timestamp', '>=', Timestamp.fromDate(new Date(startDate))));
+        }
+        if (endDate) {
+          constraints.push(where('timestamp', '<=', Timestamp.fromDate(new Date(endDate))));
+        }
+        if (userId) {
+          constraints.push(where('userId', '==', userId));
+        }
       }
 
-      const q = query(
-        auditRef,
-        ...constraints,
-        orderBy('timestamp', 'desc')
-      );
+      // Add orderBy and limit
+      constraints.push(orderBy('timestamp', 'desc'));
+      constraints.push(limit(100)); // Limit to prevent loading too many logs
+
+      const q = query(auditRef, ...constraints);
 
       const querySnapshot = await getDocs(q);
       const logs = querySnapshot.docs.map(doc => ({

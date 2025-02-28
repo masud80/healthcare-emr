@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../firebase/config';
@@ -11,14 +11,23 @@ import {
   Grid,
   Card,
   CardContent,
+  CardActions,
   Chip,
-  CircularProgress
+  CircularProgress,
+  IconButton,
+  Tooltip
 } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import AssignUsersModal from '../admin/AssignUsersModal';
 
 const FacilityList = () => {
+  const navigate = useNavigate();
   const [facilities, setFacilities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedFacility, setSelectedFacility] = useState(null);
   
   const user = useSelector(selectUser);
   const role = useSelector(selectRole);
@@ -80,6 +89,11 @@ const FacilityList = () => {
     }
   }, [user]);
 
+  const handleAssignUsers = (facility) => {
+    setSelectedFacility(facility);
+    setModalOpen(true);
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -127,8 +141,13 @@ const FacilityList = () => {
       <Grid container spacing={3}>
         {facilities.map(facility => (
           <Grid item xs={12} sm={6} md={4} key={facility.id}>
-            <Card>
-              <CardContent>
+            <Card sx={{ 
+              border: '1px solid rgba(0, 0, 0, 0.23)',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
+              <CardContent sx={{ flexGrow: 1 }}>
                 <Typography variant="h6">{facility.name}</Typography>
                 <Typography color="textSecondary" gutterBottom>
                   {facility.type}
@@ -144,10 +163,47 @@ const FacilityList = () => {
                   />
                 </Box>
               </CardContent>
+              {(isAdmin || (isFacilityAdmin && facility.adminIds?.includes(user.uid))) && (
+                <CardActions sx={{ 
+                  justifyContent: 'flex-end', 
+                  gap: 1, 
+                  p: 2,
+                  borderTop: '1px solid rgba(0, 0, 0, 0.12)'
+                }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => handleAssignUsers(facility)}
+                    data-testid={`assign-users-${facility.id}`}
+                  >
+                    Assign Users
+                  </Button>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => navigate(`/facilities/${facility.id}`)}
+                    data-testid={`edit-facility-${facility.id}`}
+                  >
+                    Edit
+                  </Button>
+                </CardActions>
+              )}
             </Card>
           </Grid>
         ))}
       </Grid>
+      <AssignUsersModal
+        open={modalOpen}
+        onClose={(updated) => {
+          setModalOpen(false);
+          setSelectedFacility(null);
+          if (updated) {
+            fetchFacilities();
+          }
+        }}
+        facility={selectedFacility}
+        currentUserRole={role}
+      />
     </Box>
   );
 };

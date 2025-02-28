@@ -26,7 +26,9 @@ const collections = [
   'appointments',
   'prescriptions',
   'messages',
-  'messageThreads'
+  'messageThreads',
+  'AlertsNotifications',
+  'audit'
 ];
 const operations = ['read', 'write', 'create', 'update', 'delete'];
 

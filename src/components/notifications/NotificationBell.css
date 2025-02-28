@@ -24,6 +24,7 @@
   padding: 16px;
   border-bottom: 1px solid #eee;
   transition: background-color 0.2s ease;
+  position: relative;
 }
 
 .notification-item:hover {
@@ -46,4 +47,14 @@
 
 .notification-item .MuiTypography-caption {
   color: #666;
+}
+
+.mark-complete-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 0.75rem !important;
+  padding: 2px 8px !important;
+  min-width: unset !important;
+  text-transform: none !important;
 } 

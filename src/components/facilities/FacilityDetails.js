@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { TextField, Button, Container, Typography, Box, Grid, Paper, Alert, CircularProgress } from '@mui/material';
+import { TextField, Button, Container, Typography, Box, Grid, Paper, Alert, CircularProgress, MenuItem } from '@mui/material';
 import { updateFacility, fetchFacilityById } from '../../redux/thunks/facilitiesThunks';
 import { selectLoading, selectError, clearError } from '../../redux/slices/facilitiesSlice';
+
+const facilityTypes = [
+  'Hospital',
+  'Clinic',
+  'Laboratory',
+  'Pharmacy',
+  'Rehabilitation Center',
+  'Other'
+];
 
 const FacilityDetails = () => {
   const { id } = useParams();
@@ -14,11 +23,14 @@ const FacilityDetails = () => {
   const error = useSelector(selectError);
   const [formData, setFormData] = useState({
     name: '',
-    address: '',
-    phone: '',
-    email: '',
     type: '',
+    location: '',
+    capacity: '',
+    contact: '',
+    phone: '',
     fax: '',
+    services: '',
+    status: 'active'
   });
 
   // Clear any errors when component unmounts
@@ -38,11 +50,14 @@ const FacilityDetails = () => {
     if (facility) {
       setFormData({
         name: facility.name || '',
-        address: facility.address || '',
-        phone: facility.phone || '',
-        email: facility.email || '',
         type: facility.type || '',
+        location: facility.location || '',
+        capacity: facility.capacity || '',
+        contact: facility.contact || '',
+        phone: facility.phone || '',
         fax: facility.fax || '',
+        services: facility.services || '',
+        status: facility.status || 'active'
       });
     }
   }, [facility]);
@@ -91,22 +106,62 @@ const FacilityDetails = () => {
             <Grid item xs={12}>
               <TextField
                 fullWidth
+                required
                 label="Name"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                required
                 disabled={loading}
               />
             </Grid>
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Address"
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
                 required
+                select
+                label="Type"
+                name="type"
+                value={formData.type}
+                onChange={handleChange}
+                disabled={loading}
+              >
+                {facilityTypes.map((type) => (
+                  <MenuItem key={type} value={type}>
+                    {type}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                required
+                label="Location"
+                name="location"
+                value={formData.location}
+                onChange={handleChange}
+                disabled={loading}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Capacity"
+                name="capacity"
+                type="number"
+                value={formData.capacity}
+                onChange={handleChange}
+                disabled={loading}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                required
+                label="Contact Information"
+                name="contact"
+                value={formData.contact}
+                onChange={handleChange}
                 disabled={loading}
               />
             </Grid>
@@ -117,29 +172,6 @@ const FacilityDetails = () => {
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
-                required
-                disabled={loading}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                disabled={loading}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Type"
-                name="type"
-                value={formData.type}
-                onChange={handleChange}
-                required
                 disabled={loading}
               />
             </Grid>
@@ -151,6 +183,18 @@ const FacilityDetails = () => {
                 value={formData.fax}
                 onChange={handleChange}
                 disabled={loading}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Services"
+                name="services"
+                value={formData.services}
+                onChange={handleChange}
+                disabled={loading}
+                multiline
+                rows={4}
               />
             </Grid>
             <Grid item xs={12}>

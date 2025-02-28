@@ -161,7 +161,7 @@ const Dashboard = () => {
     <div className="container">
       <h1 className="title">Dashboard</h1>
       <div className="grid grid-2-cols">
-        <div className="paper">
+        <div className="paper dashboard-card patients">
           <h2 className="subtitle">Recent Patients</h2>
           <div className="list">
             {recentPatients.map(patient => (
@@ -174,7 +174,7 @@ const Dashboard = () => {
           </div>
         </div>
         
-        <div className="paper">
+        <div className="paper dashboard-card appointments">
           <h2 className="subtitle">Upcoming Appointments</h2>
           <div className="list">
             {upcomingAppointments.map(appointment => (
@@ -187,7 +187,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="paper">
+        <div className="paper dashboard-card facilities">
           <h2 className="subtitle">Facilities</h2>
           <button 
             className="button button-primary"
@@ -197,7 +197,7 @@ const Dashboard = () => {
           </button>
         </div>
 
-        <div className="paper">
+        <div className="paper dashboard-card actions">
           <h2 className="subtitle">Quick Actions</h2>
           <div className="flex flex-between gap-2">
             <button 

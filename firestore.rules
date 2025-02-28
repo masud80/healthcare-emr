@@ -249,6 +249,12 @@ service cloud.firestore {
       );
     }
 
+    // Audit collection
+    match /audit/{logId} {
+      allow read: if isAuthenticated() && isAdmin();
+      allow write: if isAuthenticated() && isAdmin();
+    }
+
     // Default deny
     match /{document=**} {
       allow read, write: if false;

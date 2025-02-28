@@ -66,6 +66,58 @@ const drawerStyles = {
     padding: '16px',
     borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
     backgroundColor: '#fff'
+  },
+  dashboard: {
+    '& .MuiListItemIcon-root': { color: '#2196F3' },
+    '&:hover': { backgroundColor: 'rgba(33, 150, 243, 0.08)' }
+  },
+  patients: {
+    '& .MuiListItemIcon-root': { color: '#4CAF50' },
+    '&:hover': { backgroundColor: 'rgba(76, 175, 80, 0.08)' }
+  },
+  appointments: {
+    '& .MuiListItemIcon-root': { color: '#FF9800' },
+    '&:hover': { backgroundColor: 'rgba(255, 152, 0, 0.08)' }
+  },
+  facilities: {
+    '& .MuiListItemIcon-root': { color: '#9C27B0' },
+    '&:hover': { backgroundColor: 'rgba(156, 39, 176, 0.08)' }
+  },
+  admin: {
+    '& .MuiListItemIcon-root': { color: '#F44336' },
+    '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.08)' }
+  },
+  billing: {
+    '& .MuiListItemIcon-root': { color: '#00BCD4' },
+    '&:hover': { backgroundColor: 'rgba(0, 188, 212, 0.08)' }
+  },
+  messaging: {
+    '& .MuiListItemIcon-root': { color: '#3F51B5' },
+    '&:hover': { backgroundColor: 'rgba(63, 81, 181, 0.08)' }
+  },
+  account: {
+    '& .MuiListItemIcon-root': { color: '#795548' },
+    '&:hover': { backgroundColor: 'rgba(121, 85, 72, 0.08)' }
+  },
+  userManagement: {
+    '& .MuiListItemIcon-root': { color: '#E91E63' },
+    '&:hover': { backgroundColor: 'rgba(233, 30, 99, 0.08)' }
+  },
+  pharmacyManagement: {
+    '& .MuiListItemIcon-root': { color: '#009688' },
+    '&:hover': { backgroundColor: 'rgba(0, 150, 136, 0.08)' }
+  },
+  auditReport: {
+    '& .MuiListItemIcon-root': { color: '#FF5722' },
+    '&:hover': { backgroundColor: 'rgba(255, 87, 34, 0.08)' }
+  },
+  rolePermissions: {
+    '& .MuiListItemIcon-root': { color: '#673AB7' },
+    '&:hover': { backgroundColor: 'rgba(103, 58, 183, 0.08)' }
+  },
+  facilityGroups: {
+    '& .MuiListItemIcon-root': { color: '#607D8B' },
+    '&:hover': { backgroundColor: 'rgba(96, 125, 139, 0.08)' }
   }
 };
 
@@ -146,7 +198,7 @@ const Layout = () => {
         <ListItem component="div">
           <ListItemButton 
             onClick={() => navigate('/dashboard')}
-            sx={drawerStyles.listItem}
+            sx={{ ...drawerStyles.listItem, ...drawerStyles.dashboard }}
             selected={window.location.pathname === '/dashboard'}
           >
             <ListItemIcon>
@@ -158,7 +210,7 @@ const Layout = () => {
         <ListItem component="div">
           <ListItemButton 
             onClick={() => navigate('/patients')}
-            sx={drawerStyles.listItem}
+            sx={{ ...drawerStyles.listItem, ...drawerStyles.patients }}
             selected={window.location.pathname === '/patients'}
           >
             <ListItemIcon>
@@ -170,7 +222,7 @@ const Layout = () => {
         <ListItem component="div">
           <ListItemButton 
             onClick={() => navigate('/appointments')}
-            sx={drawerStyles.listItem}
+            sx={{ ...drawerStyles.listItem, ...drawerStyles.appointments }}
             selected={window.location.pathname === '/appointments'}
           >
             <ListItemIcon>
@@ -183,7 +235,7 @@ const Layout = () => {
         <ListItem component="div">
           <ListItemButton 
             onClick={() => navigate('/facilities')}
-            sx={drawerStyles.listItem}
+            sx={{ ...drawerStyles.listItem, ...drawerStyles.facilities }}
             selected={window.location.pathname === '/facilities'}
           >
             <ListItemIcon>
@@ -197,7 +249,7 @@ const Layout = () => {
             <ListItem component="div">
               <ListItemButton 
                 onClick={() => setAdminMenuOpen(!adminMenuOpen)}
-                sx={drawerStyles.listItem}
+                sx={{ ...drawerStyles.listItem, ...drawerStyles.admin }}
               >
                 <ListItemIcon>
                   <AdminPanelSettingsIcon />
@@ -213,7 +265,10 @@ const Layout = () => {
                 {role === 'admin' && (
                   <>
                     <ListItem component="div">
-                      <ListItemButton onClick={() => navigate('/admin/users')} sx={{ pl: 4 }}>
+                      <ListItemButton 
+                        onClick={() => navigate('/admin/users')} 
+                        sx={{ pl: 4, ...drawerStyles.userManagement }}
+                      >
                         <ListItemIcon>
                           <PersonIcon />
                         </ListItemIcon>
@@ -221,7 +276,10 @@ const Layout = () => {
                       </ListItemButton>
                     </ListItem>
                     <ListItem component="div">
-                      <ListItemButton onClick={() => navigate('/admin/pharmacies')} sx={{ pl: 4 }}>
+                      <ListItemButton 
+                        onClick={() => navigate('/admin/pharmacies')} 
+                        sx={{ pl: 4, ...drawerStyles.pharmacyManagement }}
+                      >
                         <ListItemIcon>
                           <LocalPharmacyIcon />
                         </ListItemIcon>
@@ -229,7 +287,10 @@ const Layout = () => {
                       </ListItemButton>
                     </ListItem>
                     <ListItem component="div">
-                      <ListItemButton onClick={() => navigate('/audit')} sx={{ pl: 4 }}>
+                      <ListItemButton 
+                        onClick={() => navigate('/audit')} 
+                        sx={{ pl: 4, ...drawerStyles.auditReport }}
+                      >
                         <ListItemIcon>
                           <AssessmentIcon />
                         </ListItemIcon>
@@ -237,7 +298,10 @@ const Layout = () => {
                       </ListItemButton>
                     </ListItem>
                     <ListItem component="div">
-                      <ListItemButton onClick={() => navigate('/admin/role-permissions')} sx={{ pl: 4 }}>
+                      <ListItemButton 
+                        onClick={() => navigate('/admin/role-permissions')} 
+                        sx={{ pl: 4, ...drawerStyles.rolePermissions }}
+                      >
                         <ListItemIcon>
                           <AdminPanelSettingsIcon />
                         </ListItemIcon>
@@ -245,7 +309,10 @@ const Layout = () => {
                       </ListItemButton>
                     </ListItem>
                     <ListItem component="div">
-                      <ListItemButton onClick={() => navigate('/admin/facility-groups')} sx={{ pl: 4 }}>
+                      <ListItemButton 
+                        onClick={() => navigate('/admin/facility-groups')} 
+                        sx={{ pl: 4, ...drawerStyles.facilityGroups }}
+                      >
                         <ListItemIcon>
                           <BusinessIcon />
                         </ListItemIcon>
@@ -261,7 +328,7 @@ const Layout = () => {
         <ListItem component="div">
           <ListItemButton 
             onClick={() => navigate(role === 'admin' ? '/admin/billing' : '/billing')}
-            sx={drawerStyles.listItem}
+            sx={{ ...drawerStyles.listItem, ...drawerStyles.billing }}
             selected={window.location.pathname.includes('billing')}
           >
             <ListItemIcon>
@@ -275,7 +342,7 @@ const Layout = () => {
           <ListItem component="div">
             <ListItemButton 
               onClick={() => navigate('/messaging')}
-              sx={drawerStyles.listItem}
+              sx={{ ...drawerStyles.listItem, ...drawerStyles.messaging }}
               selected={window.location.pathname.startsWith('/messaging')}
             >
               <ListItemIcon>
@@ -289,7 +356,7 @@ const Layout = () => {
           <ListItem component="div">
             <ListItemButton 
               onClick={() => navigate('/my-account')}
-              sx={drawerStyles.listItem}
+              sx={{ ...drawerStyles.listItem, ...drawerStyles.account }}
               selected={window.location.pathname === '/my-account'}
             >
               <ListItemIcon>
