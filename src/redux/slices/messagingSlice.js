@@ -106,6 +106,17 @@ export const fetchThreadMessages = createAsyncThunk(
   }
 );
 
+export const fetchThreadDetails = createAsyncThunk(
+  'messaging/fetchThreadDetails',
+  async (threadId) => {
+    const threadDoc = await getDoc(doc(db, 'messageThreads', threadId));
+    if (!threadDoc.exists()) {
+      throw new Error('Thread not found');
+    }
+    return { id: threadDoc.id, ...threadDoc.data() };
+  }
+);
+
 export const sendMessage = createAsyncThunk(
   'messaging/sendMessage',
   async ({ threadId, content }) => {
@@ -194,6 +205,20 @@ const messagingSlice = createSlice({
         state.loading = false;
       })
       .addCase(fetchThreadMessages.rejected, (state, action) => {
+        state.error = action.error.message;
+        state.loading = false;
+      })
+
+      // Fetch Thread Details
+      .addCase(fetchThreadDetails.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchThreadDetails.fulfilled, (state, action) => {
+        state.currentThread = action.payload;
+        state.loading = false;
+      })
+      .addCase(fetchThreadDetails.rejected, (state, action) => {
         state.error = action.error.message;
         state.loading = false;
       })

@@ -315,6 +315,21 @@
           "order": "ASCENDING"
         }
       ]
+    },
+ 
+    {
+      "collectionGroup": "rolepermissions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "role",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "collection",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

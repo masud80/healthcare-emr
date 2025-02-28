@@ -1,100 +1,77 @@
-import React, { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { fetchThreads, archiveThread, selectMessaging } from '../../redux/slices/messagingSlice';
-import { 
-  Button, 
-  List, 
-  ListItem, 
-  ListItemText, 
-  IconButton,
-  Paper,
-  Typography,
-  CircularProgress
-} from '@mui/material';
-import { Archive as ArchiveIcon, Add as AddIcon } from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { Box, Button, Typography, IconButton } from '@mui/material';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import CreateThread from './CreateThread';
+import ThreadList from './ThreadList';
+import ParticipantSearch from './ParticipantSearch';
+import { selectUser } from '../../redux/slices/authSlice';
+import { updateThreadParticipants } from '../../utils/messaging';
+import './MessagingDashboard.css';
 
 const MessagingDashboard = () => {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const { threads, loading, error } = useSelector(selectMessaging);
+  const [showCreateThread, setShowCreateThread] = useState(false);
+  const [showAddParticipants, setShowAddParticipants] = useState(false);
+  const [selectedThread, setSelectedThread] = useState(null);
+  const currentUser = useSelector(selectUser);
 
-  useEffect(() => {
-    dispatch(fetchThreads());
-  }, [dispatch]);
-
-  const handleArchive = async (threadId, event) => {
-    event.stopPropagation();
-    await dispatch(archiveThread(threadId));
+  const handleAddParticipant = async (participant) => {
+    if (selectedThread) {
+      try {
+        await updateThreadParticipants(selectedThread.id, participant);
+        setShowAddParticipants(false);
+      } catch (error) {
+        console.error('Error adding participant:', error);
+      }
+    }
   };
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
-        <CircularProgress />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={{ padding: '20px' }}>
-        <Typography color="error">Error: {error}</Typography>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ padding: '20px' }}>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        marginBottom: '20px'
-      }}>
-        <Typography variant="h5">Secure Messages</Typography>
+    <Box sx={{ p: 3 }}>
+      <Box className="messaging-header">
+        <Typography variant="h4" gutterBottom>
+          Secure Messaging
+        </Typography>
+        {selectedThread && (
+          <IconButton 
+            color="primary"
+            onClick={() => setShowAddParticipants(true)}
+            className="add-participant-icon"
+          >
+            <PersonAddIcon />
+          </IconButton>
+        )}
+      </Box>
+
+      {!showCreateThread ? (
         <Button
           variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => navigate('/messaging/create')}
+          color="primary"
+          onClick={() => setShowCreateThread(true)}
+          sx={{ mb: 2 }}
         >
-          New Thread
+          New Message
         </Button>
-      </div>
+      ) : (
+        <CreateThread
+          onThreadCreated={() => setShowCreateThread(false)}
+        />
+      )}
 
-      <Paper>
-        <List>
-          {threads?.length === 0 ? (
-            <ListItem>
-              <ListItemText primary="No message threads found" />
-            </ListItem>
-          ) : (
-            threads?.map(thread => (
-              <ListItem
-                key={thread.id}
-                button
-                onClick={() => navigate(`/messaging/${thread.id}`)}
-                divider
-                secondaryAction={
-                  <IconButton
-                    edge="end"
-                    onClick={(e) => handleArchive(thread.id, e)}
-                    title="Archive thread"
-                  >
-                    <ArchiveIcon />
-                  </IconButton>
-                }
-              >
-                <ListItemText
-                  primary={thread.subject}
-                  secondary={`Created ${new Date(thread.createdAt).toLocaleDateString()} • ${thread.participants.length} participants`}
-                />
-              </ListItem>
-            ))
-          )}
-        </List>
-      </Paper>
-    </div>
+      {showAddParticipants && (
+        <Box className="add-participants-modal">
+          <ParticipantSearch
+            onSelect={handleAddParticipant}
+            onClose={() => setShowAddParticipants(false)}
+          />
+        </Box>
+      )}
+
+      <ThreadList 
+        onThreadSelect={(thread) => setSelectedThread(thread)}
+        selectedThread={selectedThread}
+      />
+    </Box>
   );
 };
 

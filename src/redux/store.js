@@ -9,6 +9,7 @@ import auditReducer from './slices/auditSlice';
 import appointmentsReducer from './slices/appointmentsSlice';
 import prescriptionsReducer from './slices/prescriptionsSlice';
 import pharmacyReducer from './slices/pharmacySlice';
+import usersReducer from './slices/usersSlice';
 
 export const store = configureStore({
   reducer: {
@@ -21,7 +22,8 @@ export const store = configureStore({
     appointments: appointmentsReducer,
     prescriptions: prescriptionsReducer,
     pharmacy: pharmacyReducer,
-    billing: billingReducer
+    billing: billingReducer,
+    users: usersReducer
   }
 });
 

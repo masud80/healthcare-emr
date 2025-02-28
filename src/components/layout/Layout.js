@@ -235,6 +235,14 @@ const Layout = () => {
                         <ListItemText primary="Audit Report" />
                       </ListItemButton>
                     </ListItem>
+                    <ListItem component="div">
+                      <ListItemButton onClick={() => navigate('/admin/role-permissions')} sx={{ pl: 4 }}>
+                        <ListItemIcon>
+                          <AdminPanelSettingsIcon />
+                        </ListItemIcon>
+                        <ListItemText primary="Role Permissions" />
+                      </ListItemButton>
+                    </ListItem>
                   </>
                 )}
               </List>

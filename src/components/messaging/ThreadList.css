@@ -1,0 +1,40 @@
+.thread-list-container {
+  margin-top: 20px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.thread-list-title {
+  padding: 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.thread-list-item {
+  border-bottom: 1px solid #f5f5f5;
+  padding: 12px 16px;
+}
+
+.thread-list-item:hover {
+  background-color: #f8f9fa;
+}
+
+.thread-list-item.Mui-selected {
+  background-color: #e3f2fd !important;
+}
+
+.thread-list-item.Mui-selected:hover {
+  background-color: #e3f2fd !important;
+}
+
+.thread-timestamp {
+  display: block;
+  margin-top: 4px;
+  color: #666;
+}
+
+/* Empty state styling */
+.thread-list-item .MuiListItemText-secondary {
+  color: #666;
+  font-style: italic;
+}

@@ -1,93 +1,86 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import {
-  Paper,
-  TextField,
-  Button,
-  Typography,
-  Box,
-  CircularProgress
-} from '@mui/material';
-import { createThread } from '../../redux/slices/messagingSlice';
+import { Button } from '@mui/material';
+import ParticipantSearch from './ParticipantSearch';
+import { createThread } from '../../utils/messaging';
+import { useSelector } from 'react-redux';
+import { selectUser } from '../../redux/slices/authSlice';
+import './CreateThread.css';
 
-const CreateThread = () => {
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const [subject, setSubject] = useState('');
-  const [initialMessage, setInitialMessage] = useState('');
-  const [loading, setLoading] = useState(false);
+const CreateThread = ({ onThreadCreated }) => {
+  const [selectedParticipants, setSelectedParticipants] = useState([]);
+  const [showParticipantSearch, setShowParticipantSearch] = useState(false);
+  const currentUser = useSelector(selectUser);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!subject.trim() || !initialMessage.trim()) return;
+  const handleAddParticipant = (participant) => {
+    if (!selectedParticipants.find(p => p.id === participant.id)) {
+      setSelectedParticipants([...selectedParticipants, participant]);
+    }
+  };
 
-    setLoading(true);
+  const handleRemoveParticipant = (participantId) => {
+    setSelectedParticipants(selectedParticipants.filter(p => p.id !== participantId));
+  };
+
+  const handleCreateThread = async () => {
+    if (selectedParticipants.length === 0) {
+      alert('Please add at least one participant');
+      return;
+    }
+
     try {
-      const result = await dispatch(createThread({
-        subject: subject.trim(),
-        initialMessage: initialMessage.trim(),
-        participants: [] // Initialize empty participants array
-      })).unwrap();
-      
-      navigate(`/messaging/${result.id}`);
+      const participants = [...selectedParticipants, currentUser];
+      const threadRef = await createThread(participants);
+      if (onThreadCreated) {
+        onThreadCreated();
+      }
     } catch (error) {
-      console.error('Failed to create thread:', error);
-      // Handle error (show notification, etc.)
-    } finally {
-      setLoading(false);
+      console.error('Error creating thread:', error);
+      alert('Failed to create thread');
     }
   };
 
   return (
-    <div style={{ padding: '20px' }}>
-      <Button 
-        onClick={() => navigate('/messaging')} 
-        style={{ marginBottom: '20px' }}
-      >
-        Back to Messages
-      </Button>
-
-      <Paper style={{ padding: '20px' }}>
-        <Typography variant="h5" gutterBottom>
-          Create New Message Thread
-        </Typography>
-
-        <form onSubmit={handleSubmit}>
-          <Box mb={3}>
-            <TextField
-              fullWidth
-              label="Subject"
-              variant="outlined"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              required
-            />
-          </Box>
-
-          <Box mb={3}>
-            <TextField
-              fullWidth
-              multiline
-              rows={4}
-              label="Message"
-              variant="outlined"
-              value={initialMessage}
-              onChange={(e) => setInitialMessage(e.target.value)}
-              required
-            />
-          </Box>
-
+    <div className="create-thread-container">
+      <h2>Create New Thread</h2>
+      {!showParticipantSearch ? (
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => setShowParticipantSearch(true)}
+          className="add-participant-btn"
+        >
+          Add Participants
+        </Button>
+      ) : (
+        <ParticipantSearch
+          onSelect={handleAddParticipant}
+          onClose={() => setShowParticipantSearch(false)}
+        />
+      )}
+      {selectedParticipants.length > 0 && (
+        <div className="selected-participants">
+          <h3>Selected Participants:</h3>
+          {selectedParticipants.map(participant => (
+            <div key={participant.id} className="participant-chip">
+              {participant.name}
+              <Button
+                size="small"
+                onClick={() => handleRemoveParticipant(participant.id)}
+              >
+                Remove
+              </Button>
+            </div>
+          ))}
           <Button
-            type="submit"
             variant="contained"
             color="primary"
-            disabled={loading || !subject.trim() || !initialMessage.trim()}
+            onClick={handleCreateThread}
+            className="create-thread-btn"
           >
-            {loading ? <CircularProgress size={24} /> : 'Create Thread'}
+            Create Thread
           </Button>
-        </form>
-      </Paper>
+        </div>
+      )}
     </div>
   );
 };

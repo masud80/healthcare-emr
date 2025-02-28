@@ -35,6 +35,7 @@ import MyAccount from './components/account/MyAccount.jsx';
 import MessagingDashboard from './components/messaging/MessagingDashboard';
 import ThreadDetails from './components/messaging/ThreadDetails';
 import CreateThread from './components/messaging/CreateThread';
+import RolePermissions from './components/admin/RolePermissions';
 import './styles/components.css';
 
 function App() {
@@ -76,6 +77,7 @@ function App() {
                   <Route element={<PrivateRoute requireAdmin={true} />}>
                     <Route path="facilities/new" element={<CreateFacility />} />
                     <Route path="admin/users" element={<UserManagement />} />
+                    <Route path="admin/role-permissions" element={<RolePermissions />} />
                     <Route path="admin/assign-facility" element={<AssignFacilityTest />} />
                     <Route path="database-init" element={<DatabaseInitializer />} />
                     <Route path="audit" element={<AuditReport />} />
