@@ -7,6 +7,7 @@ import { db } from '../../firebase/config';
 import { fetchUserFacilities } from '../../redux/thunks/facilitiesThunks';
 import { DataGrid } from '@mui/x-data-grid';
 import { Button, Paper, TextField, Box, Typography, CircularProgress, Checkbox } from '@mui/material';
+import PatientHoverModal from './PatientHoverModal';
 import '../../styles/components.css';
 
 const PatientList = () => {
@@ -18,6 +19,7 @@ const PatientList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [hoveredPatient, setHoveredPatient] = useState({ data: null, anchorEl: null });
 
   useEffect(() => {
     dispatch(fetchUserFacilities());
@@ -127,8 +129,85 @@ const PatientList = () => {
     }
   };
 
+  const handleMouseEnter = (event, patient) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // Get viewport dimensions
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    // Get element position
+    const rect = event.currentTarget.getBoundingClientRect();
+    
+    // Modal dimensions (from PatientHoverModal styles)
+    const modalWidth = 300; // width defined in HoverModal styled component
+    const modalHeight = 400; // approximate height, adjust if needed
+    
+    // Calculate position
+    let left = rect.right + 10; // Default position (10px to the right of element)
+    let top = rect.top;
+    
+    // Check right boundary
+    if (left + modalWidth > viewportWidth) {
+      left = rect.left - modalWidth - 10; // Place to the left of element
+    }
+    
+    // Check bottom boundary
+    if (top + modalHeight > viewportHeight) {
+      top = viewportHeight - modalHeight - 10; // 10px padding from bottom
+    }
+    
+    // Check top boundary
+    if (top < 0) {
+      top = 10; // 10px padding from top
+    }
+    
+    setHoveredPatient({
+      data: {
+        name: patient.name,
+        profileImage: patient.profileImage,
+        facilityName: patient.facilityName || 'Unknown Facility',
+        bloodType: patient.bloodType,
+        bmi: patient.bmi || 0,
+        medicalActivity: [
+          { facilityName: patient.facilityName || 'Unknown Facility', date: new Date().toISOString() }
+        ]
+      },
+      anchorEl: event.currentTarget,
+      position: { left, top }
+    });
+  };
+
+  const handleMouseLeave = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setHoveredPatient({ data: null, anchorEl: null });
+  };
+
   const columns = [
-    { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
+    {
+      field: 'name',
+      headerName: 'Name',
+      flex: 1,
+      minWidth: 150,
+      renderCell: (params) => (
+        <div
+          onMouseEnter={(e) => handleMouseEnter(e, params.row)}
+          onMouseLeave={handleMouseLeave}
+          style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            cursor: 'pointer',
+            padding: '8px',
+          }}
+        >
+          {params.value}
+        </div>
+      ),
+    },
     { field: 'dateOfBirth', headerName: 'Date of Birth', flex: 1, minWidth: 120 },
     { field: 'contact', headerName: 'Contact', flex: 1, minWidth: 120 },
     { field: 'email', headerName: 'Email', flex: 1, minWidth: 200 },
@@ -211,7 +290,7 @@ const PatientList = () => {
         )}
       </Box>
 
-      <Paper elevation={3} sx={{ p: 3 }}>
+      <Paper elevation={3} sx={{ p: 3, position: 'relative' }}>
         <Box mb={3}>
           <TextField
             fullWidth
@@ -242,30 +321,38 @@ const PatientList = () => {
             )}
           </Box>
         ) : (
-          <DataGrid
-            rows={filteredPatients}
-            columns={columns}
-            autoHeight
-            initialState={{
-              pagination: {
-                paginationModel: { pageSize: 10, page: 0 },
-              },
-            }}
-            pageSizeOptions={[10, 25, 50]}
-            disableRowSelectionOnClick
-            sx={{
-              '& .MuiDataGrid-cell': {
-                fontSize: '0.875rem',
-              },
-              '& .MuiDataGrid-columnHeaders': {
-                backgroundColor: '#f5f5f5',
-                fontWeight: 'bold',
-              },
-              '& .MuiDataGrid-row:hover': {
-                backgroundColor: '#f8f8f8',
-              },
-            }}
-          />
+          <>
+            <DataGrid
+              rows={filteredPatients}
+              columns={columns}
+              autoHeight
+              initialState={{
+                pagination: {
+                  paginationModel: {
+                    pageSize: 10,
+                  },
+                },
+              }}
+              pageSizeOptions={[5, 10, 25]}
+              disableRowSelectionOnClick
+            />
+            {hoveredPatient.data && hoveredPatient.anchorEl && (
+              <Box
+                sx={{
+                  position: 'fixed',
+                  left: `${hoveredPatient.position?.left}px`,
+                  top: `${hoveredPatient.position?.top}px`,
+                  zIndex: 9999,
+                  pointerEvents: 'none',
+                }}
+              >
+                <PatientHoverModal
+                  patient={hoveredPatient.data}
+                  onEditProfile={() => navigate(`/patients/${hoveredPatient.data.id}/edit`)}
+                />
+              </Box>
+            )}
+          </>
         )}
       </Paper>
     </Box>

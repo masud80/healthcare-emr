@@ -40,6 +40,32 @@ import '../../styles/patientCardOutline.css';
 import '../../styles/tabs.css';
 import '../../styles/aiSummary.css';
 import { isEmailUnique } from '../../utils/patientValidation';
+import { Line, Bar, Doughnut } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js';
+
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const TabPanel = ({ children, value, index }) => (
   <div hidden={value !== index}>
@@ -68,6 +94,75 @@ const PatientDetails = () => {
   const [formError, setFormError] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
+
+  // Sample data for charts - in a real app, this would come from your backend
+  const medicalTrendData = {
+    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    datasets: [
+      {
+        label: 'Blood Pressure',
+        data: [120, 122, 119, 121, 120, 123],
+        borderColor: '#1976d2',
+        tension: 0.4,
+      },
+      {
+        label: 'Heart Rate',
+        data: [72, 75, 73, 74, 76, 75],
+        borderColor: '#dc004e',
+        tension: 0.4,
+      }
+    ]
+  };
+
+  const medicalConditionData = {
+    labels: ['Normal', 'Mild', 'Moderate', 'Severe'],
+    datasets: [{
+      data: [65, 20, 10, 5],
+      backgroundColor: ['#4caf50', '#ff9800', '#f44336', '#9c27b0'],
+    }]
+  };
+
+  const allergyData = {
+    labels: selectedPatient.allergies || [],
+    datasets: [{
+      data: Array(selectedPatient.allergies?.length || 0).fill(1),
+      backgroundColor: [
+        '#f44336',
+        '#e91e63',
+        '#9c27b0',
+        '#673ab7',
+        '#3f51b5',
+        '#2196f3'
+      ],
+    }]
+  };
+
+  // Chart options
+  const lineChartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top',
+      },
+      title: {
+        display: false,
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: false,
+      }
+    }
+  };
+
+  const doughnutOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'right',
+      }
+    }
+  };
 
   const validateEmailForUpdate = async (email) => {
     if (!email) return true;
@@ -106,12 +201,13 @@ const PatientDetails = () => {
       console.error('Error updating medical history:', error);
     }
   };
-const [editingFacility, setEditingFacility] = useState(false);
-const [selectedFacilityId, setSelectedFacilityId] = useState('');
-const [editingBasicInfo, setEditingBasicInfo] = useState(false);
-const [editingEmergencyContact, setEditingEmergencyContact] = useState(false);
-const [editedBasicInfo, setEditedBasicInfo] = useState({});
-const [editedEmergencyContact, setEditedEmergencyContact] = useState({});
+
+  const [editingFacility, setEditingFacility] = useState(false);
+  const [selectedFacilityId, setSelectedFacilityId] = useState('');
+  const [editingBasicInfo, setEditingBasicInfo] = useState(false);
+  const [editingEmergencyContact, setEditingEmergencyContact] = useState(false);
+  const [editedBasicInfo, setEditedBasicInfo] = useState({});
+  const [editedEmergencyContact, setEditedEmergencyContact] = useState({});
 
   useEffect(() => {
     dispatch(fetchFacilities());
@@ -369,41 +465,138 @@ const [editedEmergencyContact, setEditedEmergencyContact] = useState({});
             className={`tab ${tabValue === 0 ? 'active' : ''}`}
             onClick={() => setTabValue(0)}
           >
-            Personal Information
+            Dashboard
           </button>
           <button 
             className={`tab ${tabValue === 1 ? 'active' : ''}`}
             onClick={() => setTabValue(1)}
           >
-            Medical History
+            Personal Information
           </button>
           <button 
             className={`tab ${tabValue === 2 ? 'active' : ''}`}
             onClick={() => setTabValue(2)}
           >
-            Notes
+            Medical History
           </button>
           <button 
             className={`tab ${tabValue === 3 ? 'active' : ''}`}
             onClick={() => setTabValue(3)}
           >
-            Prescriptions
+            Notes
           </button>
           <button 
             className={`tab ${tabValue === 4 ? 'active' : ''}`}
             onClick={() => setTabValue(4)}
           >
-            Visits
+            Prescriptions
           </button>
           <button 
             className={`tab ${tabValue === 5 ? 'active' : ''}`}
             onClick={() => setTabValue(5)}
+          >
+            Visits
+          </button>
+          <button 
+            className={`tab ${tabValue === 6 ? 'active' : ''}`}
+            onClick={() => setTabValue(6)}
           >
             Documents
           </button>
         </div>
 
         <TabPanel value={tabValue} index={0}>
+          <div className="dashboard-container">
+            <div className="dashboard-grid">
+              <div className="dashboard-card">
+                <h3>Summary Data</h3>
+                <div className="summary-grid">
+                  <div className="summary-item">
+                    <span className="label">Blood Type</span>
+                    <span className="value">{selectedPatient.bloodType || 'N/A'}</span>
+                  </div>
+                  <div className="summary-item">
+                    <span className="label">BMI</span>
+                    <span className="value">{selectedPatient.bmi || 'N/A'}</span>
+                    <span className="status">{selectedPatient.bmi > 25 ? 'Overweight' : 'Normal'}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="dashboard-card">
+                <h3>Medical Trend</h3>
+                <div className="trend-chart">
+                  <Line data={medicalTrendData} options={lineChartOptions} />
+                </div>
+              </div>
+
+              <div className="dashboard-card">
+                <h3>Medical Condition</h3>
+                <div className="condition-chart">
+                  <Doughnut data={medicalConditionData} options={doughnutOptions} />
+                </div>
+              </div>
+
+              <div className="dashboard-card">
+                <h3>Allergy List</h3>
+                <div className="allergy-chart">
+                  {selectedPatient.allergies?.length > 0 ? (
+                    <Doughnut data={allergyData} options={doughnutOptions} />
+                  ) : (
+                    <Typography variant="body1" color="textSecondary" align="center">
+                      No allergies recorded
+                    </Typography>
+                  )}
+                </div>
+              </div>
+
+              <div className="dashboard-card full-width">
+                <h3>Medication Calendar</h3>
+                <div className="medication-calendar">
+                  <Bar
+                    data={{
+                      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                      datasets: [
+                        {
+                          label: 'Morning',
+                          data: [2, 1, 2, 1, 2, 1, 1],
+                          backgroundColor: '#42a5f5',
+                        },
+                        {
+                          label: 'Evening',
+                          data: [1, 2, 1, 2, 1, 1, 1],
+                          backgroundColor: '#1976d2',
+                        }
+                      ]
+                    }}
+                    options={{
+                      responsive: true,
+                      plugins: {
+                        legend: {
+                          position: 'top',
+                        },
+                        title: {
+                          display: false,
+                        }
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                          title: {
+                            display: true,
+                            text: 'Number of Medications'
+                          }
+                        }
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={1}>
           <div className="ai-summary">
             <h2>AI Health Analysis</h2>
             <div className="ai-summary-section">
@@ -727,7 +920,7 @@ const [editedEmergencyContact, setEditedEmergencyContact] = useState({});
           </div>
         </TabPanel>
 
-        <TabPanel value={tabValue} index={1}>
+        <TabPanel value={tabValue} index={2}>
           <div className="flex flex-between flex-center" style={{ marginBottom: '1rem' }}>
             <h2 className="subtitle">Medical History</h2>
             <Button
@@ -751,7 +944,7 @@ const [editedEmergencyContact, setEditedEmergencyContact] = useState({});
           </div>
         </TabPanel>
 
-        <TabPanel value={tabValue} index={2}>
+        <TabPanel value={tabValue} index={3}>
           <div className="flex flex-center" style={{ gap: '1rem', marginBottom: '2rem' }}>
             <h2 className="subtitle" style={{ margin: 0 }}>Clinical Notes</h2>
             <Button
@@ -779,7 +972,7 @@ const [editedEmergencyContact, setEditedEmergencyContact] = useState({});
           </div>
         </TabPanel>
 
-        <TabPanel value={tabValue} index={3}>
+        <TabPanel value={tabValue} index={4}>
           <div className="flex flex-between flex-center">
             <h2 className="subtitle">Prescriptions</h2>
             {(role === 'doctor' || role === 'nurse') && (
@@ -836,11 +1029,11 @@ const [editedEmergencyContact, setEditedEmergencyContact] = useState({});
           </div>
         </TabPanel>
 
-        <TabPanel value={tabValue} index={4}>
+        <TabPanel value={tabValue} index={5}>
           <VisitList patientId={id} />
         </TabPanel>
 
-        <TabPanel value={tabValue} index={5}>
+        <TabPanel value={tabValue} index={6}>
           {['admin', 'doctor', 'nurse', 'facility_admin'].includes(role) && (
             <div className="flex flex-between flex-center" style={{ marginBottom: '2rem' }}>
               <h2 className="subtitle">Documents</h2>
