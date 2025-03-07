@@ -38,6 +38,8 @@ import CreateThread from './components/messaging/CreateThread';
 import RolePermissions from './components/admin/RolePermissions';
 import FacilityGroups from './components/admin/FacilityGroups';
 import BillingCodes from './components/billing/BillingCodes';
+import FeatureList from './components/admin/FeatureList';
+import FeatureConfiguration from './components/admin/FeatureConfiguration';
 import './styles/components.css';
 
 function App() {
@@ -90,6 +92,8 @@ function App() {
                     <Route path="admin/pharmacies/:id/edit" element={<CreatePharmacy />} />
                     <Route path="admin/billing" element={<BillingDashboard />} />
                     <Route path="admin/billing/:billId" element={<BillDetails />} />
+                    <Route path="admin/features" element={<FeatureList />} />
+                    <Route path="admin/features/:featureId/configure" element={<FeatureConfiguration />} />
                   </Route>
 
                   {/* Other authenticated routes */}

@@ -1,3 +1,4 @@
+// AI Warning: Do not remove existing rules. if you must change an existing rule, ask for human review
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -270,6 +271,12 @@ service cloud.firestore {
     // Audit collection
     match /audit/{logId} {
       allow read: if isAuthenticated() && isAdmin();
+      allow write: if isAuthenticated() && isAdmin();
+    }
+
+    // Features collection
+    match /features/{featureId} {
+      allow read: if isAuthenticated();
       allow write: if isAuthenticated() && isAdmin();
     }
 

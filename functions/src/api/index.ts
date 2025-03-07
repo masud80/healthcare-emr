@@ -40,8 +40,12 @@ router.use((req, res, next) => {
 });
 
 // Swagger documentation - no auth required
+const swaggerHandler = swaggerUi.setup(swaggerDocument);
 router.use('/docs', swaggerUi.serve);
-router.get('/docs', swaggerUi.setup(swaggerDocument));
+router.get('/docs', (req, res, next) => {
+  console.log('Handling Swagger docs request');
+  swaggerHandler(req, res, next);
+});
 
 // Protected routes
 router.use('/patients', validateApiKey as express.RequestHandler, rateLimiter as express.RequestHandler);

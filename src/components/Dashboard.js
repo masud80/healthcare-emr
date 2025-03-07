@@ -105,18 +105,18 @@ const Dashboard = () => {
         let q;
 
         if (role === 'admin') {
-          q = query(patientsRef, orderBy('createdAt', 'desc'), limit(5));
+          q = query(patientsRef, orderBy('createdAt', 'desc'), limit(4));
         } else if (role === 'facility_admin' && userFacilities.length > 0) {
           q = query(
             patientsRef,
             where('facilityId', 'in', userFacilities.map(f => f.id)),
-            limit(5)
+            limit(4)
           );
         } else {
           q = query(
             patientsRef,
             where('doctorId', '==', user.uid),
-            limit(5)
+            limit(4)
           );
         }
 
@@ -144,7 +144,7 @@ const Dashboard = () => {
             appointmentsRef,
             where('date', '>=', new Date()),
             orderBy('date', 'asc'),
-            limit(5)
+            limit(4)
           );
         } else if (role === 'facility_admin' && userFacilities.length > 0) {
           q = query(
@@ -152,7 +152,7 @@ const Dashboard = () => {
             where('facilityId', 'in', userFacilities.map(f => f.id)),
             where('date', '>=', new Date()),
             orderBy('date', 'asc'),
-            limit(5)
+            limit(4)
           );
         } else {
           q = query(
@@ -160,7 +160,7 @@ const Dashboard = () => {
             where('doctorId', '==', user.uid),
             where('date', '>=', new Date()),
             orderBy('date', 'asc'),
-            limit(5)
+            limit(4)
           );
         }
 
@@ -216,33 +216,27 @@ const Dashboard = () => {
       <div className="grid grid-3-cols stats-section">
         <div className="paper stats-card">
           <div className="stats-icon patients">
-            <PersonIcon />
+            <PersonIcon fontSize="small" />
           </div>
           <div className="stats-content">
             <h3>{stats.totalPatients}</h3>
             <p>Total Patients</p>
           </div>
-          <div className="stats-trend positive">
-            <TrendingUpIcon />
-          </div>
         </div>
         
         <div className="paper stats-card">
           <div className="stats-icon appointments">
-            <CalendarIcon />
+            <CalendarIcon fontSize="small" />
           </div>
           <div className="stats-content">
             <h3>{stats.todayAppointments}</h3>
             <p>Today's Appointments</p>
           </div>
-          <div className="stats-indicator">
-            <TimeIcon />
-          </div>
         </div>
         
         <div className="paper stats-card">
           <div className="stats-icon active">
-            <HospitalIcon />
+            <HospitalIcon fontSize="small" />
           </div>
           <div className="stats-content">
             <h3>{stats.activePatients}</h3>
@@ -251,115 +245,75 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Main Content Grid */}
       <div className="grid grid-2-cols">
-        {/* Recent Patients Card */}
-        <div className="paper dashboard-card patients">
+        {/* Recent Patients */}
+        <div className="paper">
           <div className="card-header">
             <h2 className="subtitle">
-              <PersonIcon className="card-icon" />
+              <PersonIcon className="card-icon" fontSize="small" />
               Recent Patients
             </h2>
-            <button 
-              className="button button-primary button-small"
-              onClick={() => navigate('/patients')}
-            >
+            <button className="button-small" onClick={() => navigate('/patients')}>
               View All
             </button>
           </div>
           <div className="list">
-            {recentPatients.map(patient => (
-              <div 
-                key={patient.id} 
-                className="list-item interactive"
-                onClick={() => navigate(`/patients/${patient.id}`)}
-              >
-                <div className="list-item-content">
-                  <p className="patient-name">{patient.name}</p>
-                  <small>DOB: {formatDate(patient.dateOfBirth)}</small>
-                  {patient.status && (
-                    <span className={`status-badge ${patient.status}`}>
-                      {patient.status}
-                    </span>
-                  )}
+            {recentPatients.length > 0 ? (
+              recentPatients.map(patient => (
+                <div 
+                  key={patient.id} 
+                  className="list-item interactive"
+                  onClick={() => navigate(`/patients/${patient.id}`)}
+                >
+                  <div className="list-item-content">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h3 className="patient-name">{patient.name}</h3>
+                      <span className="appointment-time" style={{ marginLeft: '8px' }}>
+                        {formatDate(patient.dateOfBirth)}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
-            {recentPatients.length === 0 && (
-              <p className="empty-state">No recent patients</p>
-            )}
-          </div>
-        </div>
-        
-        {/* Upcoming Appointments Card */}
-        <div className="paper dashboard-card appointments">
-          <div className="card-header">
-            <h2 className="subtitle">
-              <EventIcon className="card-icon" />
-              Upcoming Appointments
-            </h2>
-            <button 
-              className="button button-primary button-small"
-              onClick={() => navigate('/appointments')}
-            >
-              View All
-            </button>
-          </div>
-          <div className="list">
-            {upcomingAppointments.map(appointment => (
-              <div 
-                key={appointment.id} 
-                className="list-item interactive"
-                onClick={() => navigate(`/appointments/${appointment.id}`)}
-              >
-                <div className="list-item-content">
-                  <p className="appointment-title">{appointment.patientName}</p>
-                  <small className="appointment-time">
-                    {formatDateTime(appointment.date)}
-                  </small>
-                  {appointment.type && (
-                    <span className={`appointment-type ${appointment.type}`}>
-                      {appointment.type}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-            {upcomingAppointments.length === 0 && (
-              <p className="empty-state">No upcoming appointments</p>
+              ))
+            ) : (
+              <div className="empty-state">No recent patients</div>
             )}
           </div>
         </div>
 
-        {/* Quick Actions Card */}
-        <div className="paper dashboard-card actions">
+        {/* Upcoming Appointments */}
+        <div className="paper">
           <div className="card-header">
             <h2 className="subtitle">
-              <AddIcon className="card-icon" />
-              Quick Actions
+              <EventIcon className="card-icon" fontSize="small" />
+              Upcoming Appointments
             </h2>
+            <button className="button-small" onClick={() => navigate('/appointments')}>
+              View All
+            </button>
           </div>
-          <div className="quick-actions-grid">
-            <button 
-              className="action-button"
-              onClick={() => navigate('/patients/new')}
-            >
-              <PersonIcon />
-              Add Patient
-            </button>
-            <button 
-              className="action-button"
-              onClick={() => navigate('/appointments/new')}
-            >
-              <EventIcon />
-              Schedule Appointment
-            </button>
-            <button 
-              className="action-button"
-              onClick={() => navigate('/facilities')}
-            >
-              <HospitalIcon />
-              View Facilities
-            </button>
+          <div className="list">
+            {upcomingAppointments.length > 0 ? (
+              upcomingAppointments.map(appointment => (
+                <div 
+                  key={appointment.id} 
+                  className="list-item interactive"
+                  onClick={() => navigate(`/appointments/${appointment.id}`)}
+                >
+                  <div className="list-item-content">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h3 className="appointment-title">{appointment.patientName}</h3>
+                      <span className="appointment-time" style={{ marginLeft: '8px' }}>
+                        {formatDateTime(appointment.date)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="empty-state">No upcoming appointments</div>
+            )}
           </div>
         </div>
       </div>

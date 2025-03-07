@@ -33,6 +33,7 @@ import LocalPharmacyIcon from '@mui/icons-material/LocalPharmacy';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import MessageIcon from '@mui/icons-material/Message';
+import SettingsIcon from '@mui/icons-material/Settings';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 import { getDocs, query, collection, where, limit, getDoc, doc } from 'firebase/firestore';
@@ -147,6 +148,10 @@ const drawerStyles = {
   billingCodes: {
     '& .MuiListItemIcon-root': { color: '#8E24AA' },
     '&:hover': { backgroundColor: 'rgba(142, 36, 170, 0.08)' }
+  },
+  featureConfig: {
+    '& .MuiListItemIcon-root': { color: '#00BFA5' },
+    '&:hover': { backgroundColor: 'rgba(0, 191, 165, 0.08)' }
   }
 };
 
@@ -372,6 +377,17 @@ const Layout = () => {
                           <AssessmentIcon />
                         </ListItemIcon>
                         <ListItemText primary="Billing Codes" />
+                      </ListItemButton>
+                    </ListItem>
+                    <ListItem component="div">
+                      <ListItemButton 
+                        onClick={() => navigate('/admin/features')} 
+                        sx={{ pl: 4, ...drawerStyles.featureConfig }}
+                      >
+                        <ListItemIcon>
+                          <SettingsIcon />
+                        </ListItemIcon>
+                        <ListItemText primary="Feature Configuration" />
                       </ListItemButton>
                     </ListItem>
                   </>

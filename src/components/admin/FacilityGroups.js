@@ -33,6 +33,7 @@ import {
 import { collection, getDocs, doc, setDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useSelector } from 'react-redux';
+import { selectUser, selectRole } from '../../redux/slices/authSlice';
 
 const FacilityGroups = () => {
   const [groups, setGroups] = useState([]);
@@ -49,7 +50,16 @@ const FacilityGroups = () => {
     email: '',
     facilities: []
   });
-  const currentUser = useSelector(state => state.auth.user);
+  const currentUser = useSelector(selectUser);
+  const userRole = useSelector(selectRole);
+
+  const getFacilityAssignment = (facilityId) => {
+    return groups.find(g => 
+      g.id !== selectedGroup?.id && 
+      Array.isArray(g.facilities) && 
+      g.facilities.includes(facilityId)
+    );
+  };
 
   useEffect(() => {
     fetchGroups();
@@ -62,7 +72,8 @@ const FacilityGroups = () => {
       const snapshot = await getDocs(groupsRef);
       const groupsData = snapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
+        facilities: Array.isArray(doc.data().facilities) ? doc.data().facilities : []
       }));
       setGroups(groupsData);
     } catch (err) {
@@ -97,7 +108,7 @@ const FacilityGroups = () => {
         phone: group.phone || '',
         fax: group.fax || '',
         email: group.email || '',
-        facilities: group.facilities || []
+        facilities: Array.isArray(group.facilities) ? group.facilities : []
       });
     } else {
       setSelectedGroup(null);
@@ -128,8 +139,20 @@ const FacilityGroups = () => {
 
   const handleSave = async () => {
     try {
+      console.log('Saving group with facilities:', formData.facilities);
+      
+      if (!formData.name) {
+        setError('Group name is required');
+        return;
+      }
+
       const groupData = {
-        ...formData,
+        name: formData.name,
+        address: formData.address || '',
+        phone: formData.phone || '',
+        fax: formData.fax || '',
+        email: formData.email || '',
+        facilities: Array.isArray(formData.facilities) ? formData.facilities : [],
         updatedAt: new Date().toISOString(),
         updatedBy: currentUser.uid
       };
@@ -139,10 +162,13 @@ const FacilityGroups = () => {
         groupData.createdBy = currentUser.uid;
       }
 
-      const groupRef = doc(db, 'facilityGroups', selectedGroup?.id || Math.random().toString(36).substr(2, 9));
+      const groupId = selectedGroup?.id || Math.random().toString(36).substr(2, 9);
+      const groupRef = doc(db, 'facilityGroups', groupId);
+      
+      console.log('Saving group data:', groupData);
       await setDoc(groupRef, groupData);
 
-      fetchGroups();
+      await fetchGroups();
       handleCloseDialog();
     } catch (err) {
       console.error('Error saving group:', err);
@@ -163,15 +189,18 @@ const FacilityGroups = () => {
   };
 
   const toggleFacility = (facilityId) => {
+    console.log('Current facilities:', formData.facilities);
+    console.log('Toggling facility:', facilityId);
     setFormData(prev => {
       const facilities = prev.facilities.includes(facilityId)
         ? prev.facilities.filter(id => id !== facilityId)
         : [...prev.facilities, facilityId];
+      console.log('Updated facilities:', facilities);
       return { ...prev, facilities };
     });
   };
 
-  if (!currentUser?.role === 'admin') {
+  if (userRole !== 'admin') {
     return (
       <Box p={3}>
         <Typography variant="h6" color="error">
@@ -308,23 +337,57 @@ const FacilityGroups = () => {
               Assign Facilities
             </Typography>
             <List>
-              {facilities.map(facility => (
-                <ListItem
-                  key={facility.id}
-                  button
-                  onClick={() => toggleFacility(facility.id)}
-                  selected={formData.facilities.includes(facility.id)}
-                >
-                  <ListItemText primary={facility.name} />
-                  <ListItemSecondaryAction>
-                    <Chip
-                      label={formData.facilities.includes(facility.id) ? 'Assigned' : 'Unassigned'}
-                      color={formData.facilities.includes(facility.id) ? 'primary' : 'default'}
-                      size="small"
+              {facilities.map(facility => {
+                const existingGroup = getFacilityAssignment(facility.id);
+                const isAssigned = formData.facilities.includes(facility.id);
+                
+                return (
+                  <ListItem
+                    key={facility.id}
+                    button
+                    onClick={() => !existingGroup && toggleFacility(facility.id)}
+                    selected={isAssigned}
+                    disabled={Boolean(existingGroup)}
+                    sx={{
+                      '&.Mui-selected': {
+                        backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                      },
+                      '&.Mui-disabled': {
+                        opacity: 0.7,
+                        backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                      },
+                    }}
+                  >
+                    <ListItemText 
+                      primary={facility.name}
+                      secondary={
+                        existingGroup 
+                          ? `Already assigned to ${existingGroup.name}`
+                          : `ID: ${facility.id}`
+                      }
                     />
-                  </ListItemSecondaryAction>
-                </ListItem>
-              ))}
+                    <ListItemSecondaryAction>
+                      <Chip
+                        label={
+                          existingGroup 
+                            ? `In ${existingGroup.name}`
+                            : isAssigned 
+                              ? 'Assigned' 
+                              : 'Unassigned'
+                        }
+                        color={
+                          existingGroup 
+                            ? 'default'
+                            : isAssigned 
+                              ? 'primary' 
+                              : 'default'
+                        }
+                        size="small"
+                      />
+                    </ListItemSecondaryAction>
+                  </ListItem>
+                );
+              })}
             </List>
           </Box>
         </DialogContent>

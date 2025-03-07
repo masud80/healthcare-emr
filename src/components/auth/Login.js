@@ -1,13 +1,20 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../../firebase/config';
+import { setUser, setRole, setError } from '../../redux/slices/authSlice';
 import '../../styles/components.css';
 
 const Login = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -17,11 +24,39 @@ const Login = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Here you would typically make an API call to verify credentials
-    // For now, we'll just simulate a successful login
-    navigate('/dashboard');
+    setLoading(true);
+    try {
+      // Sign in with Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      const user = userCredential.user;
+
+      // Get user data from Firestore
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (!userDoc.exists()) {
+        throw new Error('User document not found');
+      }
+
+      const userData = userDoc.data();
+      
+      // Update Redux state
+      dispatch(setUser({
+        uid: user.uid,
+        email: user.email
+      }));
+      dispatch(setRole(userData.role));
+
+      // Navigate to dashboard
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Login error:', error);
+      dispatch(setError(error.message));
+      // Show error to user
+      alert(error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -51,6 +86,7 @@ const Login = () => {
                   value={formData.email}
                   onChange={handleChange}
                   required
+                  disabled={loading}
                 />
               </div>
               <div className="form-group">
@@ -64,12 +100,20 @@ const Login = () => {
                   value={formData.password}
                   onChange={handleChange}
                   required
+                  disabled={loading}
                 />
               </div>
-              <button type="submit" className="login-submit-button">
-                Sign In
+              <button 
+                type="submit" 
+                className="login-submit-button"
+                disabled={loading}
+              >
+                {loading ? 'Signing In...' : 'Sign In'}
               </button>
             </form>
+            <div className="login-links">
+              <Link to="/forgot-password">Forgot Password?</Link>
+            </div>
           </div>
         </div>
 
