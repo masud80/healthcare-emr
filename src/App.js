@@ -74,8 +74,14 @@ function App() {
                     <Route path="facilities/:id" element={<FacilityDetails />} />
                     <Route path="facilities/branding" element={<FacilityBranding />} />
                     <Route path="admin/pharmacies" element={<PharmacyList />} />
+                  </Route>
+
+                  {/* Billing routes with specific role access */}
+                  <Route element={<PrivateRoute allowedRoles={['admin', 'billing', 'facility_admin']} />}>
                     <Route path="billing" element={<BillingDashboard />} />
                     <Route path="billing/:billId" element={<BillDetails />} />
+                    <Route path="admin/billing" element={<BillingDashboard />} />
+                    <Route path="admin/billing/:billId" element={<BillDetails />} />
                   </Route>
 
                   {/* Admin-only routes */}
@@ -91,8 +97,6 @@ function App() {
                     <Route path="admin/pharmacies" element={<PharmacyList />} />
                     <Route path="admin/pharmacies/create" element={<CreatePharmacy />} />
                     <Route path="admin/pharmacies/:id/edit" element={<CreatePharmacy />} />
-                    <Route path="admin/billing" element={<BillingDashboard />} />
-                    <Route path="admin/billing/:billId" element={<BillDetails />} />
                     <Route path="admin/features" element={<FeatureList />} />
                     <Route path="admin/features/:featureId/configure" element={<FeatureConfiguration />} />
                     <Route path="admin/inventory" element={<InventoryDashboard />} />

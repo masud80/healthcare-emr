@@ -58,14 +58,15 @@ service cloud.firestore {
     match /bills/{billId} {
       allow read: if isAuthenticated() && (
         isAdmin() ||
-        (isFacilityAdmin() && 
-         resource.data.facilityId in get(/databases/$(database)/documents/user_facilities/$(request.auth.uid)).data.facilities)
+        isFacilityAdmin() ||
+        isDoctor() ||
+        isNurse()
       );
-      allow create, update, delete: if isAuthenticated() && (
+      allow create, update: if isAuthenticated() && (
         isAdmin() ||
-        (isFacilityAdmin() && 
-         request.resource.data.facilityId in get(/databases/$(database)/documents/user_facilities/$(request.auth.uid)).data.facilities)
+        isFacilityAdmin()
       );
+      allow delete: if isAuthenticated() && isAdmin();
     }
 
     // Default Permissions collection

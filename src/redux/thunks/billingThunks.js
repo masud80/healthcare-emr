@@ -40,24 +40,7 @@ export const fetchBills = () => async (dispatch, getState) => {
     
     const billsRef = collection(db, 'bills');
     
-    let q;
-    // Admin can see all bills
-    if (role === 'admin') {
-      q = query(billsRef, orderBy('createdAt', 'desc'));
-    } else if (role === 'facility_admin') {
-      // Get facility admin's facilities
-      const userFacilities = await getUserFacilities(user.uid);
-      
-      // Facility admin sees bills from their facilities
-      q = query(
-        billsRef,
-        where('facilityId', 'in', userFacilities),
-        orderBy('createdAt', 'desc')
-      );
-    } else {
-      dispatch(setError('Access denied: Insufficient permissions'));
-      return;
-    }
+    let q = query(billsRef, orderBy('createdAt', 'desc'));
     
     const snapshot = await getDocs(q);
     const bills = snapshot.docs.map(doc => {

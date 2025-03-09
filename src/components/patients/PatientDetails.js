@@ -123,9 +123,9 @@ const PatientDetails = () => {
   };
 
   const allergyData = {
-    labels: selectedPatient.allergies || [],
+    labels: selectedPatient?.allergies || [],
     datasets: [{
-      data: Array(selectedPatient.allergies?.length || 0).fill(1),
+      data: Array(selectedPatient?.allergies?.length || 0).fill(1),
       backgroundColor: [
         '#f44336',
         '#e91e63',
@@ -175,8 +175,8 @@ const PatientDetails = () => {
     if (selectedPatient) {
       setMedicalHistory({
         bloodType: selectedPatient.bloodType || '',
-        allergies: selectedPatient.allergies || [],
-        chronicConditions: selectedPatient.chronicConditions || []
+        allergies: selectedPatient?.allergies || [],
+        chronicConditions: selectedPatient?.chronicConditions || []
       });
     }
   }, [selectedPatient]);
@@ -938,9 +938,9 @@ const PatientDetails = () => {
             </Button>
           </div>
           <div className="paper">
-            <p>Blood Type: {selectedPatient.bloodType}</p>
-            <p>Allergies: {selectedPatient.allergies?.join(', ') || 'None'}</p>
-            <p>Chronic Conditions: {selectedPatient.chronicConditions?.join(', ') || 'None'}</p>
+            <p>Blood Type: {selectedPatient?.bloodType || 'Not specified'}</p>
+            <p>Allergies: {selectedPatient?.allergies?.join(', ') || 'None'}</p>
+            <p>Chronic Conditions: {selectedPatient?.chronicConditions?.join(', ') || 'None'}</p>
           </div>
         </TabPanel>
 
