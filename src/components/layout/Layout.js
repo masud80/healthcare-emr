@@ -34,6 +34,7 @@ import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import MessageIcon from '@mui/icons-material/Message';
 import SettingsIcon from '@mui/icons-material/Settings';
+import InventoryIcon from '@mui/icons-material/Inventory';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 import { getDocs, query, collection, where, limit, getDoc, doc } from 'firebase/firestore';
@@ -41,117 +42,183 @@ import { db } from '../../firebase/config';
 
 const drawerWidth = 240;
 
+// Add new styles for the modern theme
+const modernStyles = {
+  appBar: {
+    background: 'linear-gradient(135deg, rgba(16, 20, 24, 0.75) 0%, rgba(0, 48, 46, 0.7) 100%)',
+    backdropFilter: 'blur(10px)',
+    borderBottom: '1px solid rgba(0, 255, 208, 0.1)',
+    boxShadow: '0 4px 30px rgba(0, 255, 208, 0.1)',
+  },
+  searchBox: {
+    background: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: '8px',
+    '&:hover': {
+      background: 'rgba(255, 255, 255, 0.15)',
+    },
+  },
+  iconButton: {
+    color: '#00FFD0',
+    '&:hover': {
+      background: 'rgba(0, 255, 208, 0.1)',
+    },
+  },
+  logo: {
+    filter: 'brightness(1.2) contrast(1.1)',
+  },
+};
+
 const drawerStyles = {
   drawer: {
     '& .MuiDrawer-paper': {
       boxSizing: 'border-box',
       width: drawerWidth,
-      backgroundColor: '#f8f9fa',
-      borderRight: '1px solid rgba(0, 0, 0, 0.12)'
+      backgroundColor: '#0A192F',
+      borderRight: '1px solid rgba(0, 255, 208, 0.1)',
+      boxShadow: '4px 0 30px rgba(0, 255, 208, 0.05)',
+      '& .MuiListItemIcon-root': {
+        color: '#00FFD0',
+        minWidth: '40px',
+        fontSize: '0.9rem',
+        transition: 'all 0.3s ease'
+      },
+      '& .MuiListItemText-primary': {
+        fontSize: '0.875rem',
+        color: '#E6F1FF',
+        transition: 'all 0.3s ease'
+      },
+      '& .MuiListItemText-secondary': {
+        fontSize: '0.75rem',
+        color: 'rgba(230, 241, 255, 0.7)'
+      },
+      '& .MuiDivider-root': {
+        borderColor: 'rgba(0, 255, 208, 0.1)'
+      }
     },
     '& .MuiListItemButton-root': {
       minHeight: '40px',
       paddingTop: '4px',
-      paddingBottom: '4px'
-    },
-    '& .MuiListItemIcon-root': {
-      minWidth: '40px',
-      fontSize: '0.9rem'
-    },
-    '& .MuiListItemText-primary': {
-      fontSize: '0.875rem'
-    },
-    '& .MuiListItemText-secondary': {
-      fontSize: '0.75rem'
-    }
-  },
-  listItem: {
-    '&:hover': {
-      backgroundColor: 'rgba(0, 0, 0, 0.04)'
-    }
-  },
-  listItemSelected: {
-    '&.Mui-selected': {
-      backgroundColor: 'rgba(25, 118, 210, 0.08)',
+      paddingBottom: '4px',
+      position: 'relative',
+      transition: 'all 0.3s ease',
+      '&::before': {
+        content: '""',
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        height: '100%',
+        width: '3px',
+        background: '#00FFD0',
+        opacity: 0,
+        transform: 'scaleY(0)',
+        transition: 'transform 0.3s ease, opacity 0.3s ease'
+      },
       '&:hover': {
-        backgroundColor: 'rgba(25, 118, 210, 0.12)'
+        backgroundColor: 'rgba(0, 255, 208, 0.1)',
+        '& .MuiListItemIcon-root': {
+          transform: 'translateX(5px)',
+          color: '#00FFD0'
+        },
+        '& .MuiListItemText-primary': {
+          transform: 'translateX(5px)',
+          color: '#00FFD0'
+        },
+        '&::before': {
+          opacity: 1,
+          transform: 'scaleY(1)'
+        }
+      },
+      '&.Mui-selected': {
+        backgroundColor: 'rgba(0, 255, 208, 0.15)',
+        '&::before': {
+          opacity: 1,
+          transform: 'scaleY(1)'
+        },
+        '& .MuiListItemIcon-root': {
+          color: '#00FFD0'
+        },
+        '& .MuiListItemText-primary': {
+          color: '#00FFD0',
+          fontWeight: 600
+        },
+        '&:hover': {
+          backgroundColor: 'rgba(0, 255, 208, 0.2)'
+        }
+      },
+      '&:active': {
+        transform: 'scale(0.98)',
+        '& .MuiListItemIcon-root': {
+          transform: 'scale(0.95)'
+        }
       }
     }
   },
   userInfo: {
-    padding: '12px',
-    borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
-    backgroundColor: '#fff',
+    padding: '16px',
+    borderBottom: '1px solid rgba(0, 255, 208, 0.1)',
+    backgroundColor: 'rgba(0, 255, 208, 0.05)',
+    backdropFilter: 'blur(10px)',
     '& .MuiTypography-subtitle1': {
       fontSize: '0.9rem',
-      fontWeight: 'bold'
+      fontWeight: 'bold',
+      color: '#00FFD0'
     },
     '& .MuiTypography-body2': {
-      fontSize: '0.8rem'
+      fontSize: '0.8rem',
+      color: '#E6F1FF'
     },
     '& .MuiTypography-caption': {
-      fontSize: '0.75rem'
+      fontSize: '0.75rem',
+      color: 'rgba(0, 255, 208, 0.7)'
     }
   },
   dashboard: {
-    '& .MuiListItemIcon-root': { color: '#2196F3' },
-    '&:hover': { backgroundColor: 'rgba(33, 150, 243, 0.08)' }
+    '& .MuiListItemIcon-root': { color: '#00FFD0' }
   },
   patients: {
-    '& .MuiListItemIcon-root': { color: '#4CAF50' },
-    '&:hover': { backgroundColor: 'rgba(76, 175, 80, 0.08)' }
+    '& .MuiListItemIcon-root': { color: '#00E5FF' }
   },
   appointments: {
-    '& .MuiListItemIcon-root': { color: '#FF9800' },
-    '&:hover': { backgroundColor: 'rgba(255, 152, 0, 0.08)' }
+    '& .MuiListItemIcon-root': { color: '#00BFA5' }
   },
   facilities: {
-    '& .MuiListItemIcon-root': { color: '#9C27B0' },
-    '&:hover': { backgroundColor: 'rgba(156, 39, 176, 0.08)' }
+    '& .MuiListItemIcon-root': { color: '#64FFDA' }
   },
   admin: {
-    '& .MuiListItemIcon-root': { color: '#F44336' },
-    '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.08)' }
+    '& .MuiListItemIcon-root': { color: '#1DE9B6' }
   },
   billing: {
-    '& .MuiListItemIcon-root': { color: '#00BCD4' },
-    '&:hover': { backgroundColor: 'rgba(0, 188, 212, 0.08)' }
+    '& .MuiListItemIcon-root': { color: '#00E676' }
   },
   messaging: {
-    '& .MuiListItemIcon-root': { color: '#3F51B5' },
-    '&:hover': { backgroundColor: 'rgba(63, 81, 181, 0.08)' }
+    '& .MuiListItemIcon-root': { color: '#69F0AE' }
   },
   account: {
-    '& .MuiListItemIcon-root': { color: '#795548' },
-    '&:hover': { backgroundColor: 'rgba(121, 85, 72, 0.08)' }
+    '& .MuiListItemIcon-root': { color: '#B2FFDA' }
   },
   userManagement: {
-    '& .MuiListItemIcon-root': { color: '#E91E63' },
-    '&:hover': { backgroundColor: 'rgba(233, 30, 99, 0.08)' }
+    '& .MuiListItemIcon-root': { color: '#00E5B9' }
   },
   pharmacyManagement: {
-    '& .MuiListItemIcon-root': { color: '#009688' },
-    '&:hover': { backgroundColor: 'rgba(0, 150, 136, 0.08)' }
+    '& .MuiListItemIcon-root': { color: '#00D6B1' }
   },
   auditReport: {
-    '& .MuiListItemIcon-root': { color: '#FF5722' },
-    '&:hover': { backgroundColor: 'rgba(255, 87, 34, 0.08)' }
+    '& .MuiListItemIcon-root': { color: '#00C8A8' }
   },
   rolePermissions: {
-    '& .MuiListItemIcon-root': { color: '#673AB7' },
-    '&:hover': { backgroundColor: 'rgba(103, 58, 183, 0.08)' }
+    '& .MuiListItemIcon-root': { color: '#00BBA0' }
   },
   facilityGroups: {
-    '& .MuiListItemIcon-root': { color: '#607D8B' },
-    '&:hover': { backgroundColor: 'rgba(96, 125, 139, 0.08)' }
+    '& .MuiListItemIcon-root': { color: '#00AD97' }
   },
   billingCodes: {
-    '& .MuiListItemIcon-root': { color: '#8E24AA' },
-    '&:hover': { backgroundColor: 'rgba(142, 36, 170, 0.08)' }
+    '& .MuiListItemIcon-root': { color: '#009F8E' }
   },
   featureConfig: {
-    '& .MuiListItemIcon-root': { color: '#00BFA5' },
-    '&:hover': { backgroundColor: 'rgba(0, 191, 165, 0.08)' }
+    '& .MuiListItemIcon-root': { color: '#009185' }
+  },
+  inventoryManagement: {
+    '& .MuiListItemIcon-root': { color: '#00847C' }
   }
 };
 
@@ -305,36 +372,17 @@ const Layout = () => {
                 </ListItemIcon>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
                   <ListItemText primary="Administration" />
-                  {adminMenuOpen ? <ExpandLess /> : <ExpandMore />}
+                  {adminMenuOpen ? 
+                    <ExpandLess sx={{ color: '#E6F1FF' }} /> : 
+                    <ExpandMore sx={{ color: '#E6F1FF' }} />
+                  }
                 </Box>
               </ListItemButton>
             </ListItem>
             <Collapse in={adminMenuOpen} timeout="auto" unmountOnExit>
-              <List component="div" disablePadding>
+              <List component="div" disablePadding sx={{ '& .MuiListItem-root': { py: 0 } }}>
                 {role === 'admin' && (
                   <>
-                    <ListItem component="div">
-                      <ListItemButton 
-                        onClick={() => navigate('/admin/users')} 
-                        sx={{ pl: 4, ...drawerStyles.userManagement }}
-                      >
-                        <ListItemIcon>
-                          <PersonIcon />
-                        </ListItemIcon>
-                        <ListItemText primary="User Management" />
-                      </ListItemButton>
-                    </ListItem>
-                    <ListItem component="div">
-                      <ListItemButton 
-                        onClick={() => navigate('/admin/pharmacies')} 
-                        sx={{ pl: 4, ...drawerStyles.pharmacyManagement }}
-                      >
-                        <ListItemIcon>
-                          <LocalPharmacyIcon />
-                        </ListItemIcon>
-                        <ListItemText primary="Pharmacy Management" />
-                      </ListItemButton>
-                    </ListItem>
                     <ListItem component="div">
                       <ListItemButton 
                         onClick={() => navigate('/audit')} 
@@ -344,28 +392,6 @@ const Layout = () => {
                           <AssessmentIcon />
                         </ListItemIcon>
                         <ListItemText primary="Audit Report" />
-                      </ListItemButton>
-                    </ListItem>
-                    <ListItem component="div">
-                      <ListItemButton 
-                        onClick={() => navigate('/admin/role-permissions')} 
-                        sx={{ pl: 4, ...drawerStyles.rolePermissions }}
-                      >
-                        <ListItemIcon>
-                          <AdminPanelSettingsIcon />
-                        </ListItemIcon>
-                        <ListItemText primary="Role Permissions" />
-                      </ListItemButton>
-                    </ListItem>
-                    <ListItem component="div">
-                      <ListItemButton 
-                        onClick={() => navigate('/admin/facility-groups')} 
-                        sx={{ pl: 4, ...drawerStyles.facilityGroups }}
-                      >
-                        <ListItemIcon>
-                          <BusinessIcon />
-                        </ListItemIcon>
-                        <ListItemText primary="Facility Groups" />
                       </ListItemButton>
                     </ListItem>
                     <ListItem component="div">
@@ -381,6 +407,17 @@ const Layout = () => {
                     </ListItem>
                     <ListItem component="div">
                       <ListItemButton 
+                        onClick={() => navigate('/admin/facility-groups')} 
+                        sx={{ pl: 4, ...drawerStyles.facilityGroups }}
+                      >
+                        <ListItemIcon>
+                          <BusinessIcon />
+                        </ListItemIcon>
+                        <ListItemText primary="Facility Groups" />
+                      </ListItemButton>
+                    </ListItem>
+                    <ListItem component="div">
+                      <ListItemButton 
                         onClick={() => navigate('/admin/features')} 
                         sx={{ pl: 4, ...drawerStyles.featureConfig }}
                       >
@@ -388,6 +425,50 @@ const Layout = () => {
                           <SettingsIcon />
                         </ListItemIcon>
                         <ListItemText primary="Feature Configuration" />
+                      </ListItemButton>
+                    </ListItem>
+                    <ListItem component="div">
+                      <ListItemButton 
+                        onClick={() => navigate('/admin/inventory')} 
+                        sx={{ pl: 4, ...drawerStyles.inventoryManagement }}
+                      >
+                        <ListItemIcon>
+                          <InventoryIcon />
+                        </ListItemIcon>
+                        <ListItemText primary="Inventory Management" />
+                      </ListItemButton>
+                    </ListItem>
+                    <ListItem component="div">
+                      <ListItemButton 
+                        onClick={() => navigate('/admin/pharmacies')} 
+                        sx={{ pl: 4, ...drawerStyles.pharmacyManagement }}
+                      >
+                        <ListItemIcon>
+                          <LocalPharmacyIcon />
+                        </ListItemIcon>
+                        <ListItemText primary="Pharmacy Management" />
+                      </ListItemButton>
+                    </ListItem>
+                    <ListItem component="div">
+                      <ListItemButton 
+                        onClick={() => navigate('/admin/role-permissions')} 
+                        sx={{ pl: 4, ...drawerStyles.rolePermissions }}
+                      >
+                        <ListItemIcon>
+                          <AdminPanelSettingsIcon />
+                        </ListItemIcon>
+                        <ListItemText primary="Role Permissions" />
+                      </ListItemButton>
+                    </ListItem>
+                    <ListItem component="div">
+                      <ListItemButton 
+                        onClick={() => navigate('/admin/users')} 
+                        sx={{ pl: 4, ...drawerStyles.userManagement }}
+                      >
+                        <ListItemIcon>
+                          <PersonIcon />
+                        </ListItemIcon>
+                        <ListItemText primary="User Management" />
                       </ListItemButton>
                     </ListItem>
                   </>
@@ -441,16 +522,21 @@ const Layout = () => {
           <ListItemButton 
             onClick={handleLogout}
             sx={{
-              ...drawerStyles.listItem,
               marginTop: 2,
-              color: 'error.main',
+              backgroundColor: 'rgba(255, 59, 48, 0.1)',
+              borderRadius: '8px',
               '&:hover': {
-                backgroundColor: 'error.light',
-                color: 'error.contrastText'
+                backgroundColor: 'rgba(255, 59, 48, 0.2)',
+              },
+              '& .MuiListItemIcon-root': {
+                color: '#FF3B30'
+              },
+              '& .MuiListItemText-primary': {
+                color: '#FF3B30'
               }
             }}
           >
-            <ListItemIcon sx={{ color: 'inherit' }}>
+            <ListItemIcon>
               <LogoutIcon />
             </ListItemIcon>
             <ListItemText primary="Logout" />
@@ -468,41 +554,54 @@ const Layout = () => {
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
-          bgcolor: facilityBranding?.ribbonColor || '#1976d2'
+          ...modernStyles.appBar,
         }}
       >
         <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
             <IconButton
-              color="inherit"
+              sx={{ ...modernStyles.iconButton, mr: 2, display: { sm: 'none' } }}
               aria-label="open drawer"
               edge="start"
               onClick={handleDrawerToggle}
-              sx={{ mr: 2, display: { sm: 'none' } }}
             >
               <MenuIcon />
             </IconButton>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <img 
-                src="/logo-icon-title.webp" 
+                src="/logo.svg" 
                 alt="QuantumLeap Logo" 
-                style={{ height: 30 }}
+                style={{ height: 30, ...modernStyles.logo }}
               />
               <Box>
                 {facilityBranding?.facilityName && (
-                  <Typography variant="subtitle2" noWrap component="div">
+                  <Typography 
+                    variant="subtitle2" 
+                    noWrap 
+                    component="div"
+                    sx={{ color: '#00FFD0' }}
+                  >
                     {facilityBranding.facilityName}
                   </Typography>
                 )}
               </Box>
             </Box>
           </Box>
-          <Box sx={{ flex: 2, display: 'flex', justifyContent: 'center' }}>
+          <Box sx={{ 
+            flex: 2, 
+            display: 'flex', 
+            justifyContent: 'center',
+            '& .MuiInputBase-root': modernStyles.searchBox,
+          }}>
             <GlobalSearch />
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, justifyContent: 'flex-end', gap: 2 }}>
             {user && <NotificationBell />}
-            {user && shouldShowFacilityFilter() && <FacilityFilter />}
+            {user && shouldShowFacilityFilter() && (
+              <Box sx={{ '& .MuiInputBase-root': modernStyles.searchBox }}>
+                <FacilityFilter />
+              </Box>
+            )}
           </Box>
         </Toolbar>
       </AppBar>

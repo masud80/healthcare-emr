@@ -45,7 +45,7 @@ export default function LoginScreen({ navigation }) {
       <View style={styles.formContainer}>
         <View style={styles.logoContainer}>
           <Image
-            source={require('../../assets/logo-icon-title.webp')}
+            source={require('../../assets/logo.svg')}
             style={styles.logo}
             resizeMode="contain"
           />

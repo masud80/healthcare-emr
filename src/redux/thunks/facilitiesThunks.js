@@ -2,6 +2,35 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 import { db } from '../../firebase/config';
 import { collection, getDocs, doc, getDoc, updateDoc, query, where, orderBy, limit, startAfter, documentId } from 'firebase/firestore';
 
+// Helper function to serialize Firestore timestamps
+const serializeTimestamps = (obj) => {
+  if (!obj) return obj;
+  
+  const newObj = { ...obj };
+  
+  Object.keys(newObj).forEach(key => {
+    const value = newObj[key];
+    
+    // Check if value is a Firestore Timestamp
+    if (value && typeof value === 'object' && value.seconds !== undefined && value.nanoseconds !== undefined) {
+      // Convert Timestamp to ISO string
+      newObj[key] = new Date(value.seconds * 1000 + value.nanoseconds / 1000000).toISOString();
+    } 
+    // Handle nested objects and arrays
+    else if (value && typeof value === 'object') {
+      if (Array.isArray(value)) {
+        newObj[key] = value.map(item => 
+          typeof item === 'object' ? serializeTimestamps(item) : item
+        );
+      } else {
+        newObj[key] = serializeTimestamps(value);
+      }
+    }
+  });
+  
+  return newObj;
+};
+
 // Fetch all facilities
 export const fetchFacilities = createAsyncThunk(
   'facilities/fetchFacilities',
@@ -9,7 +38,7 @@ export const fetchFacilities = createAsyncThunk(
     try {
       const facilitiesRef = collection(db, 'facilities');
       const snapshot = await getDocs(facilitiesRef);
-      const facilities = snapshot.docs.map(doc => ({
+      const facilities = snapshot.docs.map(doc => serializeTimestamps({
         id: doc.id,
         ...doc.data()
       }));
@@ -42,7 +71,7 @@ export const fetchUserFacilities = createAsyncThunk(
         console.log('Admin user detected - proceeding to fetch all facilities');
         const facilitiesRef = collection(db, 'facilities');
         const snapshot = await getDocs(facilitiesRef);
-        const allFacilities = snapshot.docs.map(doc => ({
+        const allFacilities = snapshot.docs.map(doc => serializeTimestamps({
           id: doc.id,
           ...doc.data()
         }));
@@ -92,7 +121,7 @@ export const fetchUserFacilities = createAsyncThunk(
         const batch = facilityIds.slice(i, i + 10);
         const batchQuery = query(facilitiesRef, where(documentId(), 'in', batch));
         const batchSnapshot = await getDocs(batchQuery);
-        allFacilities.push(...batchSnapshot.docs.map(doc => ({
+        allFacilities.push(...batchSnapshot.docs.map(doc => serializeTimestamps({
           id: doc.id,
           ...doc.data()
         })));
@@ -127,7 +156,7 @@ export const fetchFacilitiesByIds = createAsyncThunk(
       const facilitiesRef = collection(db, 'facilities');
       const q = query(facilitiesRef, where('__name__', 'in', facilityIds));
       const snapshot = await getDocs(q);
-      const facilities = snapshot.docs.map(doc => ({
+      const facilities = snapshot.docs.map(doc => serializeTimestamps({
         id: doc.id,
         ...doc.data()
       }));
@@ -147,10 +176,10 @@ export const fetchFacilityById = createAsyncThunk(
       const facilityRef = doc(db, 'facilities', facilityId);
       const facilityDoc = await getDoc(facilityRef);
       if (facilityDoc.exists()) {
-        return {
+        return serializeTimestamps({
           id: facilityDoc.id,
           ...facilityDoc.data()
-        };
+        });
       } else {
         throw new Error('Facility not found');
       }
@@ -181,10 +210,10 @@ export const updateFacility = createAsyncThunk(
       const updatedDoc = await getDoc(facilityRef);
       
       // Return the complete updated facility data
-      return {
+      return serializeTimestamps({
         id,
         ...updatedDoc.data()
-      };
+      });
     } catch (error) {
       console.error('Error updating facility:', error);
       return rejectWithValue(error.message || 'Failed to update facility');

@@ -96,7 +96,7 @@ const BillExport = ({ bill, open, onClose }) => {
           ${exportOptions.includeLogo || exportOptions.includeLetterhead ? `
             <div class="header">
               ${exportOptions.includeLogo ? `
-                <img src="/logo-icon-title.webp" alt="QuantumLeap Logo" class="logo" />
+                <img src="/logo.svg" alt="QuantumLeap Logo" class="logo" />
               ` : ''}
               ${exportOptions.includeLetterhead ? `
                 <h1>QuantumLeap EMR System</h1>

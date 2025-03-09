@@ -1,3 +1,5 @@
+// AI WARNING: This file is critical. Do not remove or mdoify without consulting human reviewer
+
 import { configureStore } from '@reduxjs/toolkit';
 import messagingReducer from './slices/messagingSlice';
 import billingReducer from './slices/billingSlice';
@@ -10,6 +12,7 @@ import appointmentsReducer from './slices/appointmentsSlice';
 import prescriptionsReducer from './slices/prescriptionsSlice';
 import pharmacyReducer from './slices/pharmacySlice';
 import usersReducer from './slices/usersSlice';
+import inventoryReducer from './slices/inventorySlice';
 
 export const store = configureStore({
   reducer: {
@@ -23,7 +26,8 @@ export const store = configureStore({
     prescriptions: prescriptionsReducer,
     pharmacy: pharmacyReducer,
     billing: billingReducer,
-    users: usersReducer
+    users: usersReducer,
+    inventory: inventoryReducer
   }
 });
 

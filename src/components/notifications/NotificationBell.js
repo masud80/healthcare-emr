@@ -33,6 +33,42 @@ import {
 import { db } from '../../firebase/config';
 import './NotificationBell.css';
 
+const modernStyles = {
+  iconButton: {
+    color: '#00FFD0',
+    '&:hover': {
+      background: 'rgba(0, 255, 208, 0.1)',
+    },
+  },
+  badge: {
+    '& .MuiBadge-badge': {
+      background: 'linear-gradient(135deg, #00FFD0 0%, #00BFA5 100%)',
+      color: '#0A192F',
+    },
+  },
+  menu: {
+    '& .MuiPaper-root': {
+      background: 'linear-gradient(135deg, rgba(16, 20, 24, 0.95) 0%, rgba(0, 48, 46, 0.9) 100%)',
+      backdropFilter: 'blur(10px)',
+      border: '1px solid rgba(0, 255, 208, 0.1)',
+      boxShadow: '0 4px 30px rgba(0, 255, 208, 0.1)',
+      color: '#fff',
+    },
+  },
+  notificationItem: {
+    borderBottom: '1px solid rgba(0, 255, 208, 0.1)',
+    '&:hover': {
+      background: 'rgba(0, 255, 208, 0.05)',
+    },
+    '&.action': {
+      borderLeft: '4px solid #00FFD0',
+    },
+    '&.view': {
+      borderLeft: '4px solid #00BFA5',
+    },
+  },
+};
+
 const NotificationBell = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [notifications, setNotifications] = useState([]);
@@ -139,11 +175,14 @@ const NotificationBell = () => {
   return (
     <div className="notification-bell">
       <IconButton
-        color="inherit"
+        sx={modernStyles.iconButton}
         onClick={handleClick}
         className="notification-button"
       >
-        <Badge badgeContent={notifications.length} color="error">
+        <Badge 
+          badgeContent={notifications.length} 
+          sx={modernStyles.badge}
+        >
           <NotificationsIcon />
         </Badge>
       </IconButton>
@@ -152,18 +191,22 @@ const NotificationBell = () => {
         open={Boolean(anchorEl)}
         onClose={handleClose}
         className="notification-menu"
+        sx={modernStyles.menu}
         PaperProps={{
           className: 'notification-menu-paper'
         }}
       >
-        <Box className="notification-header">
+        <Box className="notification-header" sx={{ color: '#00FFD0' }}>
           <Typography variant="h6">Notifications</Typography>
         </Box>
-        <Divider />
+        <Divider sx={{ borderColor: 'rgba(0, 255, 208, 0.1)' }} />
         <List className="notification-list">
           {notifications.length === 0 ? (
             <ListItem>
-              <ListItemText primary="No new notifications" />
+              <ListItemText 
+                primary="No new notifications" 
+                sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+              />
             </ListItem>
           ) : (
             notifications.map((notification) => (

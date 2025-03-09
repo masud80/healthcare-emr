@@ -12,7 +12,7 @@ import CreateVisit from './components/visits/CreateVisit';
 import VisitList from './components/visits/VisitList';
 import VisitDetails from './components/visits/VisitDetails';
 import Login from './components/auth/Login';
-import Dashboard from './components/Dashboard';
+import ModernDashboard from './components/ModernDashboard';
 import PatientList from './components/patients/PatientList';
 import PatientDetails from './components/patients/PatientDetails';
 import PatientForm from './components/patients/PatientForm';
@@ -40,6 +40,7 @@ import FacilityGroups from './components/admin/FacilityGroups';
 import BillingCodes from './components/billing/BillingCodes';
 import FeatureList from './components/admin/FeatureList';
 import FeatureConfiguration from './components/admin/FeatureConfiguration';
+import InventoryDashboard from './components/inventory/InventoryDashboard';
 import './styles/components.css';
 
 function App() {
@@ -65,7 +66,7 @@ function App() {
                 {/* Protected routes */}
                 <Route element={<PrivateRoute />}>
                   {/* Basic routes that any authenticated user can access */}
-                  <Route path="dashboard" element={<Dashboard />} />
+                  <Route path="dashboard" element={<ModernDashboard />} />
                 
                   {/* Admin and Facility Admin routes */}
                   <Route element={<PrivateRoute requireAdmin={true} requireFacilityAdmin={true} />}>
@@ -94,6 +95,7 @@ function App() {
                     <Route path="admin/billing/:billId" element={<BillDetails />} />
                     <Route path="admin/features" element={<FeatureList />} />
                     <Route path="admin/features/:featureId/configure" element={<FeatureConfiguration />} />
+                    <Route path="admin/inventory" element={<InventoryDashboard />} />
                   </Route>
 
                   {/* Other authenticated routes */}

@@ -280,6 +280,42 @@ service cloud.firestore {
       allow write: if isAuthenticated() && isAdmin();
     }
 
+    // Inventory Management Collections
+    match /inventory_items/{itemId} {
+      allow read: if isAuthenticated() && !isPatientWithPortalAccess();
+      allow write: if isAuthenticated() && (isAdmin() || isFacilityAdmin());
+    }
+
+    match /inventory_batches/{batchId} {
+      allow read: if isAuthenticated() && !isPatientWithPortalAccess();
+      allow write: if isAuthenticated() && (isAdmin() || isFacilityAdmin());
+    }
+
+    match /inventory_transactions/{transactionId} {
+      allow read: if isAuthenticated() && !isPatientWithPortalAccess();
+      allow write: if isAuthenticated() && (isAdmin() || isFacilityAdmin());
+    }
+
+    match /inventory_suppliers/{supplierId} {
+      allow read: if isAuthenticated() && (isAdmin() || isFacilityAdmin());
+      allow write: if isAuthenticated() && (isAdmin() || isFacilityAdmin());
+    }
+
+    match /inventory_purchase_orders/{orderId} {
+      allow read: if isAuthenticated() && !isPatientWithPortalAccess();
+      allow write: if isAuthenticated() && (isAdmin() || isFacilityAdmin());
+    }
+
+    match /inventory_locations/{locationId} {
+      allow read: if isAuthenticated() && !isPatientWithPortalAccess();
+      allow write: if isAuthenticated() && (isAdmin() || isFacilityAdmin());
+    }
+
+    match /inventory_counters/{counterId} {
+      allow read: if isAuthenticated() && (isAdmin() || isFacilityAdmin());
+      allow write: if isAuthenticated() && (isAdmin() || isFacilityAdmin());
+    }
+
     // Default deny
     match /{document=**} {
       allow read, write: if false;

@@ -63,7 +63,7 @@ const Login = () => {
     <div className="login-page">
       <header className="login-header">
         <img 
-          src="/logo-icon-title.webp" 
+          src="/logo.svg" 
           alt="Healthcare EMR" 
           className="login-logo"
         />

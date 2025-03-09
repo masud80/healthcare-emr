@@ -2,7 +2,7 @@ const admin = require('firebase-admin');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-const serviceAccount = require('../../serviceAccountKey.json');
+const serviceAccount = require('../serviceAccountKey.json');
 
 // Initialize Firebase Admin
 if (!admin.apps.length) {

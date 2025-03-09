@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1000" height="200" viewBox="0 0 1000 200" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <!-- Gradient for the quantum symbol -->
+        <linearGradient id="quantumGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#00FFD0;stop-opacity:0.8"/>
+            <stop offset="100%" style="stop-color:#0066CC;stop-opacity:0.9"/>
+        </linearGradient>
+        
+        <!-- Glow effect -->
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+            <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" result="glow"/>
+            <feComposite in="SourceGraphic" in2="glow" operator="over"/>
+        </filter>
+    </defs>
+    
+    <!-- Quantum Symbol with gradient and glow -->
+    <g filter="url(#glow)">
+        <circle cx="100" cy="100" r="60" fill="none" stroke="url(#quantumGradient)" stroke-width="8"/>
+        <circle cx="100" cy="100" r="30" fill="url(#quantumGradient)"/>
+        <path d="M 100 40 Q 160 100 100 160" fill="none" stroke="url(#quantumGradient)" stroke-width="8"/>
+        <path d="M 40 100 Q 100 160 160 100" fill="none" stroke="url(#quantumGradient)" stroke-width="8"/>
+    </g>
+    
+    <!-- Text with modern styling -->
+    <g style="filter: url(#glow)">
+        <text x="200" y="140" font-family="Arial Black, sans-serif" font-size="96" font-weight="900" fill="#FFFFFF">QuantumLeap</text>
+    </g>
+</svg>

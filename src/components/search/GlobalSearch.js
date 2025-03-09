@@ -20,6 +20,61 @@ import { collection, query, where, getDocs, orderBy, limit } from 'firebase/fire
 import { db } from '../../firebase/config';
 import { selectUser, selectRole } from '../../redux/slices/authSlice';
 
+const modernStyles = {
+  searchField: {
+    '& .MuiOutlinedInput-root': {
+      backgroundColor: 'rgba(0, 255, 208, 0.05)',
+      backdropFilter: 'blur(10px)',
+      borderRadius: '8px',
+      color: '#fff',
+      '& fieldset': {
+        borderColor: 'rgba(0, 255, 208, 0.2)',
+      },
+      '&:hover fieldset': {
+        borderColor: 'rgba(0, 255, 208, 0.3)',
+      },
+      '&.Mui-focused fieldset': {
+        borderColor: '#00FFD0',
+      },
+    },
+    '& .MuiInputBase-input::placeholder': {
+      color: 'rgba(0, 255, 208, 0.7)',
+      opacity: 1,
+    },
+  },
+  searchIcon: {
+    color: '#00FFD0',
+  },
+  loader: {
+    color: '#00FFD0',
+  },
+  resultsContainer: {
+    background: 'linear-gradient(135deg, rgba(16, 20, 24, 0.95) 0%, rgba(0, 48, 46, 0.9) 100%)',
+    backdropFilter: 'blur(10px)',
+    border: '1px solid rgba(0, 255, 208, 0.1)',
+    boxShadow: '0 4px 30px rgba(0, 255, 208, 0.1)',
+    borderRadius: '8px',
+    overflow: 'hidden',
+  },
+  resultItem: {
+    '&:hover': {
+      backgroundColor: 'rgba(0, 255, 208, 0.1)',
+    },
+    '& .MuiTypography-root': {
+      color: '#fff',
+    },
+    '& .MuiTypography-secondary': {
+      color: 'rgba(255, 255, 255, 0.7)',
+    },
+  },
+  closeButton: {
+    color: '#00FFD0',
+    '&:hover': {
+      backgroundColor: 'rgba(0, 255, 208, 0.1)',
+    },
+  },
+};
+
 const GlobalSearch = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -161,91 +216,70 @@ const GlobalSearch = () => {
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         size="small"
-        sx={{
-          backgroundColor: 'rgba(255, 255, 255, 0.15)',
-          borderRadius: 1,
-          '& .MuiOutlinedInput-root': {
-            color: 'white',
-            '& fieldset': {
-              borderColor: 'rgba(255, 255, 255, 0.3)',
-            },
-            '&:hover fieldset': {
-              borderColor: 'rgba(255, 255, 255, 0.5)',
-            },
-            '&.Mui-focused fieldset': {
-              borderColor: 'white',
-            },
-          },
-          '& .MuiInputBase-input::placeholder': {
-            color: 'rgba(255, 255, 255, 0.7)',
-            opacity: 1,
-          },
-        }}
+        sx={modernStyles.searchField}
         InputProps={{
           startAdornment: (
             <InputAdornment position="start">
-              <SearchIcon sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+              <SearchIcon sx={modernStyles.searchIcon} />
             </InputAdornment>
           ),
           endAdornment: loading && (
             <InputAdornment position="end">
-              <CircularProgress size={20} color="inherit" />
+              <CircularProgress size={20} sx={modernStyles.loader} />
             </InputAdornment>
           ),
         }}
       />
+      
       <Popper
         open={searchResults.length > 0}
         anchorEl={anchorEl}
         placement="bottom-start"
         style={{ width: '500px', zIndex: 1300 }}
       >
-        <Paper elevation={3}>
+        <Paper elevation={3} sx={modernStyles.resultsContainer}>
           <Box sx={{ position: 'relative' }}>
             <IconButton
               size="small"
               onClick={() => setSearchResults([])}
-              sx={{
-                position: 'absolute',
-                right: 8,
-                top: 8,
-                color: 'rgba(0, 0, 0, 0.54)'
-              }}
+              sx={modernStyles.closeButton}
             >
               <CloseIcon fontSize="small" />
             </IconButton>
             <List sx={{ pt: 1, pb: 1 }}>
               {searchResults.map((patient) => (
-              <ListItem 
-                key={patient.id} 
-                button 
-                onClick={() => handlePatientClick(patient.id)}
-                sx={{ flexDirection: 'column', alignItems: 'flex-start' }}
-              >
-                <ListItemText 
-                  primary={patient.name}
-                  secondary={
-                    <>
-                      <div>DOB: {patient.dateOfBirth || 'N/A'}</div>
-                      {patient.matchingRecords.length > 0 && (
-                        <div style={{ marginTop: '8px' }}>
-                          <strong>Matching Records:</strong>
-                          {patient.matchingRecords.map((record, index) => (
-                            <div key={record.id} style={{ marginLeft: '8px', fontSize: '0.9em' }}>
-                              <div>{new Date(record.date).toLocaleDateString()} - {record.type}</div>
-                              {record.diagnosis && <div>Diagnosis: {record.diagnosis}</div>}
-                              {record.treatment && <div>Treatment: {record.treatment}</div>}
-                              {record.description && <div>Notes: {record.description}</div>}
-                              {index < patient.matchingRecords.length - 1 && <div style={{ margin: '4px 0', borderBottom: '1px dashed #ccc' }} />}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  }
-                />
-              </ListItem>
-            ))}
+                <ListItem 
+                  key={patient.id} 
+                  button 
+                  onClick={() => handlePatientClick(patient.id)}
+                  sx={{ ...modernStyles.resultItem, flexDirection: 'column', alignItems: 'flex-start' }}
+                >
+                  <ListItemText
+                    primary={patient.name}
+                    secondary={
+                      <>
+                        <div>DOB: {patient.dateOfBirth || 'N/A'}</div>
+                        {patient.matchingRecords.length > 0 && (
+                          <div style={{ marginTop: '8px' }}>
+                            <strong style={{ color: '#00FFD0' }}>Matching Records:</strong>
+                            {patient.matchingRecords.map((record, index) => (
+                              <div key={record.id} style={{ marginLeft: '8px', fontSize: '0.9em', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                <div>{new Date(record.date).toLocaleDateString()} - {record.type}</div>
+                                {record.diagnosis && <div>Diagnosis: {record.diagnosis}</div>}
+                                {record.treatment && <div>Treatment: {record.treatment}</div>}
+                                {record.description && <div>Notes: {record.description}</div>}
+                                {index < patient.matchingRecords.length - 1 && (
+                                  <div style={{ margin: '4px 0', borderBottom: '1px solid rgba(0, 255, 208, 0.1)' }} />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    }
+                  />
+                </ListItem>
+              ))}
             </List>
           </Box>
         </Paper>
