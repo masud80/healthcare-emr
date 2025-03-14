@@ -36,3 +36,5 @@ serviceAccountKey.json
 *.swp
 *.swo
 PatientPortal/node_modules/*
+firebase/node_modules/*
+

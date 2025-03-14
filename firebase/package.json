@@ -1,0 +1,18 @@
+{
+  "name": "firebase-tools",
+  "version": "1.0.0",
+  "description": "Firebase tools for hospice-emr",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "manage-rules": "node rules/manage-rules.mjs",
+    "merge-indexes": "node indexes/manage-indexes.mjs"
+  },
+  "dependencies": {
+    "diff": "^7.0.0",
+    "dotenv": "^16.3.1",
+    "firebase-admin": "^11.10.1",
+    "googleapis": "^126.0.1"
+  },
+  "private": true
+}

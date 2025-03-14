@@ -60,7 +60,11 @@
     "build": "react-scripts build",
     "test": "cross-env NODE_ENV=test jest --watch",
     "eject": "react-scripts eject",
-    "deploy": "npm run build && firebase deploy",
+    "sync-rules": "node firebase/rules/manage-rules.mjs",
+    "sync-indexes": "node firebase/indexes/manage-indexes.mjs",
+    "prefirebase": "npm run sync-rules && npm run sync-indexes",
+    "firebase": "node firebase-wrapper.cjs",
+    "deploy": "node firebase-wrapper.cjs deploy",
     "deploy:indexes": "firebase deploy --only firestore:indexes",
     "init:permissions": "node src/scripts/initializePermissions.js",
     "seed:suppliers": "node scripts/seedSupplierData.js"
@@ -111,5 +115,8 @@
   },
   "resolutions": {
     "@adobe/css-tools": "^4.3.1"
+  },
+  "bin": {
+    "firebase-cli": "./firebase-wrapper.cjs"
   }
 }
